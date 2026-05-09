@@ -1,0 +1,85 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import { getSessionProfile } from "../../lib/auth";
+import { isAdmin } from "../../lib/roles";
+
+export const prerender = false;
+
+const { supabase, user, profile } = await getSessionProfile(Astro);
+
+if (!user) {
+  return Astro.redirect(`/auth/login/?next=${encodeURIComponent(new URL(Astro.request.url).pathname)}`, 302);
+}
+
+if (!isAdmin(profile?.role)) {
+  return Astro.redirect("/dashboard/", 302);
+}
+
+const { data: trips, error: loadError } = await supabase
+  .from("trips")
+  .select("id, title, status, province, city, destination_name, updated_at, profiles:author_id(display_name)")
+  .order("updated_at", { ascending: false })
+  .order("created_at", { ascending: false });
+
+type AuthorProfile = { display_name?: string | null };
+
+function getAuthorName(profiles: AuthorProfile | AuthorProfile[] | null) {
+  return Array.isArray(profiles) ? profiles[0]?.display_name : profiles?.display_name;
+}
+---
+
+<DashboardLayout title="全部游记管理 - Dashboard">
+  <section class="section">
+    <p class="eyebrow">Admin</p>
+    <h1>全部游记管理</h1>
+    <p class="lead">查看全站游记，并复用现有编辑页维护内容。</p>
+    <div class="button-row">
+      <a class="button secondary" href="/admin/">返回后台</a>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="trip-list">
+    <h2 id="trip-list">游记列表</h2>
+    {loadError && <p class="meta" role="alert">读取游记失败，请稍后再试。</p>}
+    {
+      !loadError && trips && trips.length > 0 ? (
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th scope="col">标题</th>
+                <th scope="col">作者</th>
+                <th scope="col">状态</th>
+                <th scope="col">城市</th>
+                <th scope="col">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {trips.map((trip) => (
+                <tr>
+                  <td>
+                    <strong>{trip.title}</strong>
+                    <br />
+                    <span class="meta">{trip.destination_name}</span>
+                  </td>
+                  <td>{getAuthorName(trip.profiles) ?? "未知作者"}</td>
+                  <td>{trip.status === "published" ? "已发布" : "草稿"}</td>
+                  <td>
+                    {trip.province} / {trip.city}
+                  </td>
+                  <td>
+                    <a class="button secondary" href={`/dashboard/trips/${trip.id}/edit/`}>
+                      编辑
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        !loadError && <p class="meta">还没有游记。</p>
+      )
+    }
+  </section>
+</DashboardLayout>

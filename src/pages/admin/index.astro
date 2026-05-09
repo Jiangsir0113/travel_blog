@@ -1,0 +1,61 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import { getSessionProfile } from "../../lib/auth";
+import { isAdmin } from "../../lib/roles";
+
+export const prerender = false;
+
+const { user, profile } = await getSessionProfile(Astro);
+if (!user) {
+  return Astro.redirect(`/auth/login/?next=${encodeURIComponent(new URL(Astro.request.url).pathname)}`, 302);
+}
+
+if (!isAdmin(profile?.role)) {
+  return Astro.redirect("/dashboard/", 302);
+}
+
+const adminEntries = [
+  {
+    href: "/admin/invites/",
+    title: "邀请码管理",
+    description: "生成作者邀请码，查看使用次数和启用状态。",
+  },
+  {
+    href: "/admin/users/",
+    title: "用户管理",
+    description: "维护用户角色和足迹地图颜色。",
+  },
+  {
+    href: "/admin/trips/",
+    title: "全部游记管理",
+    description: "查看全站游记，并进入现有编辑页处理内容。",
+  },
+];
+---
+
+<DashboardLayout title="管理员后台 - Dashboard">
+  <section class="section">
+    <p class="eyebrow">Admin</p>
+    <h1>管理员后台</h1>
+    <p class="lead">集中处理邀请码、用户权限和全站游记内容。</p>
+  </section>
+
+  <section class="section" aria-labelledby="admin-entry-list">
+    <h2 id="admin-entry-list">管理入口</h2>
+    <div class="grid">
+      {
+        adminEntries.map((entry) => (
+          <article class="card">
+            <h3>{entry.title}</h3>
+            <p class="meta">{entry.description}</p>
+            <div class="button-row">
+              <a class="button secondary" href={entry.href}>
+                进入
+              </a>
+            </div>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+</DashboardLayout>

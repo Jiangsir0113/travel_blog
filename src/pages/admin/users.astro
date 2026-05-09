@@ -1,0 +1,135 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import { getSessionProfile } from "../../lib/auth";
+import { isAdmin, type UserRole } from "../../lib/roles";
+
+export const prerender = false;
+
+const allowedRoles = new Set<UserRole>(["admin", "author", "reader"]);
+const mapColorPattern = /^#[0-9A-Fa-f]{6}$/;
+
+const { supabase, user, profile } = await getSessionProfile(Astro);
+if (!user) {
+  return Astro.redirect(`/auth/login/?next=${encodeURIComponent(new URL(Astro.request.url).pathname)}`, 302);
+}
+
+if (!isAdmin(profile?.role)) {
+  return Astro.redirect("/dashboard/", 302);
+}
+
+let message: string | null = null;
+let error: string | null = null;
+
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  const id = String(formData.get("id") ?? "").trim();
+  const role = String(formData.get("role") ?? "").trim();
+  const mapColor = String(formData.get("map_color") ?? "").trim();
+
+  if (!id) {
+    error = "缺少用户 ID。";
+  } else if (!allowedRoles.has(role as UserRole)) {
+    error = "角色只能是 admin、author 或 reader。";
+  } else if (!mapColorPattern.test(mapColor)) {
+    error = "地图颜色必须是 #RRGGBB 格式。";
+  } else {
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ role, map_color: mapColor })
+      .eq("id", id);
+
+    if (updateError) {
+      error = "更新用户失败，请稍后再试。";
+    } else {
+      message = "用户资料已更新。";
+    }
+  }
+}
+
+const { data: users, error: loadError } = await supabase
+  .from("profiles")
+  .select("id, display_name, role, map_color")
+  .order("created_at", { ascending: false });
+---
+
+<DashboardLayout title="用户管理 - Dashboard">
+  <section class="section">
+    <p class="eyebrow">Admin</p>
+    <h1>用户管理</h1>
+    <p class="lead">调整用户角色和足迹地图颜色。</p>
+    <div class="button-row">
+      <a class="button secondary" href="/admin/">返回后台</a>
+    </div>
+    {message && <p class="meta" role="status">{message}</p>}
+    {error && <p class="meta" role="alert">{error}</p>}
+  </section>
+
+  <section class="section" aria-labelledby="user-list">
+    <h2 id="user-list">用户列表</h2>
+    {loadError && <p class="meta" role="alert">读取用户失败，请稍后再试。</p>}
+    {
+      !loadError && users && users.length > 0 ? (
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th scope="col">昵称</th>
+                <th scope="col">角色</th>
+                <th scope="col">地图颜色</th>
+                <th scope="col">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((managedUser) => (
+                <tr>
+                  <td>{managedUser.display_name}</td>
+                  <td>
+                    <form id={`user-${managedUser.id}`} method="post" class="admin-inline-form">
+                      <input type="hidden" name="id" value={managedUser.id} />
+                      <label class="sr-only" for={`role-${managedUser.id}`}>
+                        角色
+                      </label>
+                      <select id={`role-${managedUser.id}`} name="role">
+                        <option value="admin" selected={managedUser.role === "admin"}>
+                          admin
+                        </option>
+                        <option value="author" selected={managedUser.role === "author"}>
+                          author
+                        </option>
+                        <option value="reader" selected={managedUser.role === "reader"}>
+                          reader
+                        </option>
+                      </select>
+                    </form>
+                  </td>
+                  <td>
+                    <label class="sr-only" for={`map-color-${managedUser.id}`}>
+                      地图颜色
+                    </label>
+                    <input
+                      form={`user-${managedUser.id}`}
+                      id={`map-color-${managedUser.id}`}
+                      name="map_color"
+                      type="text"
+                      value={managedUser.map_color}
+                      pattern="^#[0-9A-Fa-f]{6}$"
+                      maxlength="7"
+                      required
+                    />
+                  </td>
+                  <td>
+                    <button form={`user-${managedUser.id}`} class="button secondary" type="submit">
+                      保存
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        !loadError && <p class="meta">还没有用户。</p>
+      )
+    }
+  </section>
+</DashboardLayout>
