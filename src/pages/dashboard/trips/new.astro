@@ -1,0 +1,73 @@
+---
+import DashboardLayout from "../../../layouts/DashboardLayout.astro";
+import TripForm from "../../../components/trips/TripForm.astro";
+import { getSessionProfile } from "../../../lib/auth";
+import { canWriteTrips } from "../../../lib/roles";
+import {
+  generateUniqueTripSlug,
+  getTripFormDraft,
+  isTripSlugUniqueError,
+  parseTripFormData,
+  TripFormError,
+  type TripFormDraft,
+  type TripFormPayload,
+} from "../../../lib/trips";
+
+export const prerender = false;
+
+const { supabase, user, profile } = await getSessionProfile(Astro);
+
+if (!user || !profile) {
+  return Astro.redirect("/auth/login/", 302);
+}
+
+if (!canWriteTrips(profile.role)) {
+  return new Response("你没有创建游记的权限。", { status: 403 });
+}
+
+let error: string | null = null;
+let initial: Partial<TripFormPayload | TripFormDraft> | null = null;
+
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  initial = getTripFormDraft(formData);
+
+  try {
+    const payload = parseTripFormData(formData);
+    const published_at = payload.status === "published" ? new Date().toISOString() : null;
+    const slug = await generateUniqueTripSlug(supabase, payload.title);
+    const { error: insertError } = await supabase.from("trips").insert({
+      ...payload,
+      author_id: user.id,
+      slug,
+      published_at,
+    });
+
+    if (insertError) {
+      error = isTripSlugUniqueError(insertError)
+        ? "这个标题生成的链接已被占用，请稍微调整标题后再试。"
+        : "保存游记失败，请检查内容后再试。";
+    } else {
+      return Astro.redirect("/dashboard/", 302);
+    }
+  } catch (caughtError) {
+    if (caughtError instanceof TripFormError) {
+      error = caughtError.messages.join(" ");
+    } else {
+      error = "保存游记失败，请稍后再试。";
+    }
+  }
+}
+---
+
+<DashboardLayout title="新建游记 - Dashboard">
+  <section class="section">
+    <p class="eyebrow">新建</p>
+    <h1>新建游记</h1>
+    <p class="lead">先写文字和地点信息，图片上传会在后续任务接入。</p>
+  </section>
+
+  <section class="section">
+    <TripForm initial={initial} actionLabel="保存游记" error={error} />
+  </section>
+</DashboardLayout>

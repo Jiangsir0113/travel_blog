@@ -1,0 +1,116 @@
+---
+import type { TripFormDraft, TripFormPayload } from "../../lib/trips";
+
+type InitialTrip = Partial<TripFormPayload | TripFormDraft> & {
+  id?: string;
+};
+
+interface Props {
+  initial?: InitialTrip | null;
+  actionLabel?: string;
+  error?: string | null;
+}
+
+const { initial = null, actionLabel = "保存游记", error = null } = Astro.props;
+const status = typeof initial?.status === "string" ? initial.status : "draft";
+const hasInvalidStatus = status !== "draft" && status !== "published";
+const visitedAt = initial?.visited_at ?? "";
+const hasInvalidVisitedAt =
+  typeof visitedAt === "string" && visitedAt !== "" && !/^\d{4}-\d{2}-\d{2}$/.test(visitedAt);
+---
+
+{error && <p class="meta" role="alert">{error}</p>}
+
+<form method="post">
+  <div class="form-grid">
+    <div class="field">
+      <label for="title">标题</label>
+      <input id="title" name="title" value={initial?.title ?? ""} maxlength="120" required />
+    </div>
+
+    <div class="field">
+      <label for="visited_at">旅行日期</label>
+      <input
+        id="visited_at"
+        name="visited_at"
+        type={hasInvalidVisitedAt ? "text" : "date"}
+        value={visitedAt}
+        placeholder="YYYY-MM-DD"
+        required
+      />
+    </div>
+
+    <div class="field">
+      <label for="destination_name">目的地</label>
+      <input
+        id="destination_name"
+        name="destination_name"
+        value={initial?.destination_name ?? ""}
+        maxlength="120"
+        required
+      />
+    </div>
+
+    <div class="field">
+      <label for="province">省份</label>
+      <input id="province" name="province" value={initial?.province ?? ""} maxlength="40" required />
+    </div>
+
+    <div class="field">
+      <label for="city">城市</label>
+      <input id="city" name="city" value={initial?.city ?? ""} maxlength="40" required />
+    </div>
+
+    <div class="field">
+      <label for="status">状态</label>
+      <select id="status" name="status">
+        {
+          hasInvalidStatus && (
+            <option value={status} selected>
+              无效状态：{status}
+            </option>
+          )
+        }
+        <option value="draft" selected={status === "draft"}>保存草稿</option>
+        <option value="published" selected={status === "published"}>直接发布</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="latitude">纬度</label>
+      <input
+        id="latitude"
+        name="latitude"
+        inputmode="decimal"
+        value={initial?.latitude ?? ""}
+        placeholder="可选"
+      />
+    </div>
+
+    <div class="field">
+      <label for="longitude">经度</label>
+      <input
+        id="longitude"
+        name="longitude"
+        inputmode="decimal"
+        value={initial?.longitude ?? ""}
+        placeholder="可选"
+      />
+    </div>
+
+    <div class="field" style="grid-column: 1 / -1;">
+      <label for="summary">摘要</label>
+      <textarea id="summary" name="summary" maxlength="240">{initial?.summary ?? ""}</textarea>
+    </div>
+
+    <div class="field" style="grid-column: 1 / -1;">
+      <label for="content">正文</label>
+      <textarea id="content" name="content" required>{initial?.content ?? ""}</textarea>
+    </div>
+  </div>
+
+  <div class="button-row">
+    <button class="button" type="submit">{actionLabel}</button>
+    <a class="button secondary" href="/dashboard/">返回列表</a>
+  </div>
+</form>

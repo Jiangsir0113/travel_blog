@@ -1,0 +1,47 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import TripCard from "../../components/trips/TripCard.astro";
+import { getSessionProfile } from "../../lib/auth";
+
+export const prerender = false;
+
+const { supabase, user, profile } = await getSessionProfile(Astro);
+
+if (!user || !profile) {
+  return Astro.redirect("/auth/login/", 302);
+}
+
+const { data: trips, error } = await supabase
+  .from("trips")
+  .select("id, slug, title, summary, destination_name, visited_at, province, city, status")
+  .eq("author_id", user.id)
+  .order("updated_at", { ascending: false })
+  .order("created_at", { ascending: false });
+---
+
+<DashboardLayout title="我的游记 - Dashboard">
+  <section class="section">
+    <p class="eyebrow">Dashboard</p>
+    <h1>我的游记</h1>
+    <p class="lead">整理草稿、发布新游记，继续把旅行记录写完整。</p>
+    <div class="button-row">
+      <a class="button" href="/dashboard/trips/new/">新建游记</a>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="trip-list">
+    <h2 id="trip-list">游记列表</h2>
+    {error && <p class="meta" role="alert">读取游记失败，请稍后再试。</p>}
+    {
+      !error && trips && trips.length > 0 ? (
+        <div class="grid">
+          {trips.map((trip) => (
+            <TripCard trip={trip} mode="dashboard" />
+          ))}
+        </div>
+      ) : (
+        !error && <p class="meta">还没有游记，先新建一篇吧。</p>
+      )
+    }
+  </section>
+</DashboardLayout>

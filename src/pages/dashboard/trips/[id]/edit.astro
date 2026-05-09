@@ -1,0 +1,88 @@
+---
+import DashboardLayout from "../../../../layouts/DashboardLayout.astro";
+import TripForm from "../../../../components/trips/TripForm.astro";
+import { getSessionProfile } from "../../../../lib/auth";
+import { canWriteTrips } from "../../../../lib/roles";
+import {
+  getTripFormDraft,
+  parseTripFormData,
+  TripFormError,
+  type TripFormDraft,
+  type TripFormPayload,
+} from "../../../../lib/trips";
+
+export const prerender = false;
+
+const { supabase, user, profile } = await getSessionProfile(Astro);
+
+if (!user || !profile) {
+  return Astro.redirect("/auth/login/", 302);
+}
+
+if (!canWriteTrips(profile.role)) {
+  return new Response("你没有编辑游记的权限。", { status: 403 });
+}
+
+const tripId = Astro.params.id;
+
+if (!tripId) {
+  return new Response("没有找到这篇游记。", { status: 404 });
+}
+
+const { data: trip, error: loadError } = await supabase
+  .from("trips")
+  .select(
+    "id, title, summary, content, visited_at, destination_name, province, city, latitude, longitude, status, published_at",
+  )
+  .eq("id", tripId)
+  .single();
+
+if (loadError || !trip) {
+  return new Response("没有找到这篇游记，或你没有访问权限。", { status: 404 });
+}
+
+let error: string | null = null;
+let initial: (Partial<TripFormPayload | TripFormDraft> & { id: string }) = trip;
+
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  initial = { ...getTripFormDraft(formData), id: tripId };
+
+  try {
+    const payload = parseTripFormData(formData);
+    const nextPublishedAt =
+      payload.status === "published" ? trip.published_at ?? new Date().toISOString() : null;
+    const { error: updateError } = await supabase
+      .from("trips")
+      .update({
+        ...payload,
+        published_at: nextPublishedAt,
+      })
+      .eq("id", tripId);
+
+    if (updateError) {
+      error = "更新游记失败，请检查内容后再试。";
+    } else {
+      return Astro.redirect("/dashboard/", 302);
+    }
+  } catch (caughtError) {
+    if (caughtError instanceof TripFormError) {
+      error = caughtError.messages.join(" ");
+    } else {
+      error = "更新游记失败，请稍后再试。";
+    }
+  }
+}
+---
+
+<DashboardLayout title="编辑游记 - Dashboard">
+  <section class="section">
+    <p class="eyebrow">编辑</p>
+    <h1>编辑游记</h1>
+    <p class="lead">修改文字、地点和发布状态。</p>
+  </section>
+
+  <section class="section">
+    <TripForm initial={initial} actionLabel="更新游记" error={error} />
+  </section>
+</DashboardLayout>

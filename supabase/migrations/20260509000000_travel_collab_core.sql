@@ -48,6 +48,36 @@ create table if not exists public.trips (
   )
 );
 
+alter table public.trips
+  drop constraint if exists trips_coordinates_valid;
+alter table public.trips
+  add constraint trips_coordinates_valid check (
+    (
+      latitude is null
+      and longitude is null
+    )
+    or (
+      latitude is not null
+      and longitude is not null
+      and latitude between -90 and 90
+      and longitude between -180 and 180
+    )
+  );
+
+alter table public.trips
+  drop constraint if exists trips_status_published_at_consistent;
+alter table public.trips
+  add constraint trips_status_published_at_consistent check (
+    (
+      status = 'draft'
+      and published_at is null
+    )
+    or (
+      status = 'published'
+      and published_at is not null
+    )
+  );
+
 create table if not exists public.trip_assets (
   id uuid primary key default gen_random_uuid(),
   trip_id uuid not null references public.trips(id) on delete cascade,

@@ -1,0 +1,47 @@
+---
+import type { TripStatus } from "../../lib/trips";
+
+export type TripCardMode = "public" | "dashboard";
+
+export type TripCardTrip = {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string | null;
+  destination_name: string;
+  visited_at: string;
+  province?: string | null;
+  city: string;
+  status?: TripStatus | null;
+};
+
+interface Props {
+  trip: TripCardTrip;
+  mode?: TripCardMode;
+}
+
+const { trip, mode = "public" } = Astro.props;
+const href =
+  mode === "dashboard" ? `/dashboard/trips/${trip.id}/edit/` : `/trips/${trip.slug}/`;
+const formatDate = new Intl.DateTimeFormat("zh-CN", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
+const visitedAt = new Date(`${trip.visited_at}T00:00:00`);
+const displayDate = Number.isNaN(visitedAt.valueOf())
+  ? trip.visited_at
+  : formatDate.format(visitedAt);
+const statusText = trip.status === "published" ? "已发布" : "草稿";
+---
+
+<article class="card">
+  <p class="meta">
+    {trip.destination_name} · {trip.city} · {displayDate}
+    {mode === "dashboard" && trip.status ? ` · ${statusText}` : ""}
+  </p>
+  <h3>
+    <a href={href}>{trip.title}</a>
+  </h3>
+  {trip.summary ? <p>{trip.summary}</p> : <p class="meta">还没有摘要。</p>}
+</article>
