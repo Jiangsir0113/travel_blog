@@ -1,0 +1,101 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+export const prerender = false;
+---
+
+<BaseLayout title="登录 - 旅行共写小站">
+  <section class="section">
+    <h1>登录</h1>
+    <p class="lead">回到你的旅行记录工作台。</p>
+
+    <form id="login-form" class="form-grid" novalidate>
+      <div class="field">
+        <label for="email">邮箱</label>
+        <input id="email" name="email" type="email" autocomplete="email" required />
+      </div>
+
+      <div class="field">
+        <label for="password">密码</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          required
+        />
+      </div>
+
+      <div class="button-row">
+        <button class="button" type="submit">登录</button>
+        <a class="button secondary" href="/auth/register/">还没有账号，去注册</a>
+      </div>
+
+      <p id="login-message" class="meta" role="status" aria-live="polite"></p>
+    </form>
+  </section>
+</BaseLayout>
+
+<script>
+  import { createSupabaseBrowserClient } from "../../lib/supabase/browser";
+
+  const form = document.querySelector<HTMLFormElement>("#login-form");
+  const message = document.querySelector<HTMLParagraphElement>("#login-message");
+
+  function showMessage(text: string) {
+    if (message) {
+      message.textContent = text;
+    }
+  }
+
+  function getSafeNextPath() {
+    const next = new URLSearchParams(window.location.search).get("next");
+
+    if (!next || !next.startsWith("/") || next.startsWith("//")) {
+      return "/dashboard/";
+    }
+
+    try {
+      const parsed = new URL(next, window.location.origin);
+
+      if (parsed.origin !== window.location.origin) {
+        return "/dashboard/";
+      }
+
+      return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    } catch {
+      return "/dashboard/";
+    }
+  }
+
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    showMessage("正在登录...");
+
+    const formData = new FormData(form);
+    const email = String(formData.get("email") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
+
+    if (!email || !password) {
+      showMessage("请填写邮箱和密码。");
+      return;
+    }
+
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        showMessage("登录失败，请检查邮箱和密码。");
+        return;
+      }
+
+      window.location.assign(getSafeNextPath());
+    } catch {
+      showMessage("登录失败，请稍后再试。");
+    }
+  });
+</script>
