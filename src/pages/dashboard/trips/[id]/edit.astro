@@ -3,7 +3,7 @@ import DashboardLayout from "../../../../layouts/DashboardLayout.astro";
 import ImageUploader from "../../../../components/trips/ImageUploader.astro";
 import TripForm from "../../../../components/trips/TripForm.astro";
 import { getSessionProfile } from "../../../../lib/auth";
-import { canWriteTrips } from "../../../../lib/roles";
+import { canWriteTrips, isAdmin } from "../../../../lib/roles";
 import {
   getTripFormDraft,
   parseTripFormData,
@@ -42,11 +42,44 @@ if (loadError || !trip) {
   return new Response("没有找到这篇游记，或你没有访问权限。", { status: 404 });
 }
 
+if (trip.author_id !== user.id && !isAdmin(profile.role)) {
+  return new Response("没有找到这篇游记，或你没有访问权限。", { status: 404 });
+}
+
 let error: string | null = null;
 let initial: (Partial<TripFormPayload | TripFormDraft> & { id: string }) = trip;
 
 if (Astro.request.method === "POST") {
   const formData = await Astro.request.formData();
+  const intent = String(formData.get("intent") ?? "");
+
+  if (intent === "delete") {
+    const { data: assets } = await supabase
+      .from("trip_assets")
+      .select("storage_path")
+      .eq("trip_id", tripId);
+    const storagePaths = (assets ?? []).map((asset) => asset.storage_path);
+
+    if (storagePaths.length > 0) {
+      const { error: storageError } = await supabase.storage
+        .from("trip-images")
+        .remove(storagePaths);
+
+      if (storageError) {
+        error = "删除游记图片失败，请稍后再试。";
+      }
+    }
+
+    if (!error) {
+      const { error: deleteError } = await supabase.from("trips").delete().eq("id", tripId);
+
+      if (deleteError) {
+        error = "删除游记失败，请稍后再试。";
+      } else {
+        return Astro.redirect("/dashboard/", 302);
+      }
+    }
+  } else {
   initial = { ...getTripFormDraft(formData), id: tripId };
 
   try {
@@ -73,6 +106,7 @@ if (Astro.request.method === "POST") {
       error = "更新游记失败，请稍后再试。";
     }
   }
+  }
 }
 ---
 
@@ -85,6 +119,10 @@ if (Astro.request.method === "POST") {
 
   <section class="section">
     <TripForm initial={initial} actionLabel="更新游记" error={error} />
+    <form method="post" class="button-row">
+      <input type="hidden" name="intent" value="delete" />
+      <button class="button danger" type="submit">删除这篇游记</button>
+    </form>
   </section>
   <section class="section">
     <p class="eyebrow">图片</p>

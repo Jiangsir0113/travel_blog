@@ -3,7 +3,6 @@
 interface CloudflareEnv {
   PUBLIC_SUPABASE_URL: string;
   PUBLIC_SUPABASE_PUBLISHABLE_KEY: string;
-  BOOTSTRAP_ADMIN_EMAIL?: string;
 }
 
 type Runtime = import("@astrojs/cloudflare").Runtime<CloudflareEnv>;

@@ -333,6 +333,20 @@ h3 {
   background: color-mix(in srgb, var(--sun), transparent 82%);
 }
 
+.button.danger {
+  border-color: var(--clay);
+  background: var(--clay);
+}
+
+.button.danger:hover,
+.button.danger:focus-visible {
+  background: color-mix(in srgb, var(--clay), black 10%);
+}
+
+.inline-form {
+  margin: 0;
+}
+
 .admin-table-wrap {
   overflow-x: auto;
   border: 1px solid var(--line);

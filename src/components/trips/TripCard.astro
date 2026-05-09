@@ -44,4 +44,19 @@ const statusText = trip.status === "published" ? "已发布" : "草稿";
     <a href={href}>{trip.title}</a>
   </h3>
   {trip.summary ? <p>{trip.summary}</p> : <p class="meta">还没有摘要。</p>}
+  {
+    mode === "dashboard" && (
+      <div class="button-row">
+        <a class="button secondary" href={href}>
+          编辑
+        </a>
+        <form method="post" action={href} class="inline-form">
+          <input type="hidden" name="intent" value="delete" />
+          <button class="button danger" type="submit">
+            删除
+          </button>
+        </form>
+      </div>
+    )
+  }
 </article>

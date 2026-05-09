@@ -20,7 +20,7 @@ PUBLIC_SUPABASE_PUBLISHABLE_KEY=<Supabase Publishable Key>
 
 先在 Supabase 项目中执行 `supabase/migrations/20260509000000_travel_collab_core.sql`，创建表、RLS policy、RPC 和私有 `trip-images` Storage bucket。
 
-创建第一个 Auth 用户后，再按 `supabase/seed.sql` 初始化管理员资料和默认邀请码。后续作者账号需要通过邀请码注册，或由管理员在后台生成新的邀请码。
+创建第一个 Auth 用户后，再按 `supabase/seed.sql` 初始化管理员资料和一个随机默认邀请码。脚本会把最早创建的 Auth 用户提升为管理员；运行后在 Supabase SQL Editor 查询 `public.invite_codes` 获取随机邀请码。后续作者账号需要通过邀请码注册，或由管理员在后台生成新的邀请码。
 
 ## 部署后验证
 
