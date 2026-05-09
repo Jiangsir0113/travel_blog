@@ -306,7 +306,7 @@ create policy "assets published and owner read" on public.trip_assets for select
 drop policy if exists "assets owner insert" on public.trip_assets;
 create policy "assets owner insert" on public.trip_assets for insert to authenticated with check (
   public.can_write_content()
-  and owner_id = auth.uid()
+  and (owner_id = auth.uid() or public.is_admin())
   and split_part(storage_path, '/', 1) = owner_id::text
   and split_part(storage_path, '/', 2) = trip_id::text
   and exists (
@@ -366,7 +366,6 @@ drop policy if exists "trip images owner insert" on storage.objects;
 create policy "trip images owner insert" on storage.objects for insert to authenticated with check (
   bucket_id = 'trip-images'
   and public.can_write_content()
-  and (storage.foldername(name))[1] = auth.uid()::text
   and exists (
     select 1
     from public.trips
@@ -375,6 +374,7 @@ create policy "trip images owner insert" on storage.objects for insert to authen
         then (storage.foldername(storage.objects.name))[2]::uuid
       else null
     end
+      and trips.author_id::text = (storage.foldername(storage.objects.name))[1]
       and (trips.author_id = auth.uid() or public.is_admin())
   )
 );
@@ -382,7 +382,6 @@ drop policy if exists "trip images owner update" on storage.objects;
 create policy "trip images owner update" on storage.objects for update to authenticated using (
   bucket_id = 'trip-images'
   and public.can_write_content()
-  and (storage.foldername(name))[1] = auth.uid()::text
   and exists (
     select 1
     from public.trips
@@ -391,12 +390,12 @@ create policy "trip images owner update" on storage.objects for update to authen
         then (storage.foldername(storage.objects.name))[2]::uuid
       else null
     end
+      and trips.author_id::text = (storage.foldername(storage.objects.name))[1]
       and (trips.author_id = auth.uid() or public.is_admin())
   )
 ) with check (
   bucket_id = 'trip-images'
   and public.can_write_content()
-  and (storage.foldername(name))[1] = auth.uid()::text
   and exists (
     select 1
     from public.trips
@@ -405,6 +404,7 @@ create policy "trip images owner update" on storage.objects for update to authen
         then (storage.foldername(storage.objects.name))[2]::uuid
       else null
     end
+      and trips.author_id::text = (storage.foldername(storage.objects.name))[1]
       and (trips.author_id = auth.uid() or public.is_admin())
   )
 );
@@ -412,7 +412,6 @@ drop policy if exists "trip images owner delete" on storage.objects;
 create policy "trip images owner delete" on storage.objects for delete to authenticated using (
   bucket_id = 'trip-images'
   and public.can_write_content()
-  and (storage.foldername(name))[1] = auth.uid()::text
   and exists (
     select 1
     from public.trips
@@ -421,6 +420,7 @@ create policy "trip images owner delete" on storage.objects for delete to authen
         then (storage.foldername(storage.objects.name))[2]::uuid
       else null
     end
+      and trips.author_id::text = (storage.foldername(storage.objects.name))[1]
       and (trips.author_id = auth.uid() or public.is_admin())
   )
 );

@@ -1,5 +1,6 @@
 ---
 import DashboardLayout from "../../../../layouts/DashboardLayout.astro";
+import ImageUploader from "../../../../components/trips/ImageUploader.astro";
 import TripForm from "../../../../components/trips/TripForm.astro";
 import { getSessionProfile } from "../../../../lib/auth";
 import { canWriteTrips } from "../../../../lib/roles";
@@ -32,7 +33,7 @@ if (!tripId) {
 const { data: trip, error: loadError } = await supabase
   .from("trips")
   .select(
-    "id, title, summary, content, visited_at, destination_name, province, city, latitude, longitude, status, published_at",
+    "id, author_id, title, summary, content, visited_at, destination_name, province, city, latitude, longitude, status, published_at",
   )
   .eq("id", tripId)
   .single();
@@ -84,5 +85,10 @@ if (Astro.request.method === "POST") {
 
   <section class="section">
     <TripForm initial={initial} actionLabel="更新游记" error={error} />
+  </section>
+  <section class="section">
+    <p class="eyebrow">图片</p>
+    <h2>上传旅行图片</h2>
+    <ImageUploader userId={trip.author_id} tripId={trip.id} />
   </section>
 </DashboardLayout>

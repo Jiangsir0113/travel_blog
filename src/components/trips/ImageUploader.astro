@@ -1,0 +1,175 @@
+---
+interface Props {
+  userId: string;
+  tripId: string;
+}
+
+const { userId, tripId } = Astro.props;
+const inputId = `trip-image-file-${tripId}`;
+---
+
+<div class="image-uploader" data-trip-image-uploader data-user-id={userId} data-trip-id={tripId}>
+  <div class="field">
+    <label for={inputId}>上传图片</label>
+    <input id={inputId} type="file" accept="image/*" />
+  </div>
+  <p class="meta upload-status" role="status" aria-live="polite">请选择要上传的图片。</p>
+</div>
+
+<script>
+  import { buildTripImagePath } from "../../lib/assets";
+  import { compressTripImage } from "../../lib/image-compression";
+  import { createSupabaseBrowserClient } from "../../lib/supabase/browser";
+
+  const maxUploadedBytes = 1_000_000;
+
+  type ImageDimensions = {
+    width: number | null;
+    height: number | null;
+  };
+
+  document.querySelectorAll<HTMLElement>("[data-trip-image-uploader]").forEach((uploader) => {
+    const input = uploader.querySelector<HTMLInputElement>('input[type="file"]');
+    const status = uploader.querySelector<HTMLElement>(".upload-status");
+    const userId = uploader.dataset.userId;
+    const tripId = uploader.dataset.tripId;
+
+    if (!input || !status || !userId || !tripId) {
+      return;
+    }
+
+    input.addEventListener("change", async () => {
+      const file = input.files?.[0];
+
+      if (!file) {
+        setStatus(status, "请选择要上传的图片。");
+        return;
+      }
+
+      if (!file.type.startsWith("image/")) {
+        setStatus(status, "只能上传图片文件。", true);
+        input.value = "";
+        return;
+      }
+
+      input.disabled = true;
+      setStatus(status, "正在压缩图片...");
+
+      try {
+        const compressedFile = await compressTripImage(file);
+
+        if (compressedFile.size > maxUploadedBytes) {
+          throw new Error("压缩后图片仍超过 1MB，请换一张更小的图片。");
+        }
+
+        const dimensions = await getImageDimensions(compressedFile);
+        const storagePath = buildTripImagePath({
+          userId,
+          tripId,
+          imageId: createImageId(),
+        });
+        const supabase = createSupabaseBrowserClient();
+
+        setStatus(status, "正在上传图片...");
+
+        const { error: uploadError } = await supabase.storage
+          .from("trip-images")
+          .upload(storagePath, compressedFile, {
+            cacheControl: "3600",
+            contentType: "image/webp",
+            upsert: false,
+          });
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { error: metadataError } = await supabase.from("trip_assets").insert({
+          trip_id: tripId,
+          owner_id: userId,
+          storage_path: storagePath,
+          mime_type: "image/webp",
+          size_bytes: compressedFile.size,
+          width: dimensions.width,
+          height: dimensions.height,
+        });
+
+        if (metadataError) {
+          const { error: cleanupError } = await supabase.storage.from("trip-images").remove([storagePath]);
+          const cleanupStatus = cleanupError
+            ? `清理已上传文件也失败：${cleanupError.message}`
+            : "已删除已上传文件";
+          throw new Error(`图片元数据保存失败，${cleanupStatus}。原始错误：${metadataError.message}`);
+        }
+
+        setStatus(status, "图片上传成功。");
+        input.value = "";
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "图片上传失败，请稍后再试。";
+        setStatus(status, message || "图片上传失败，请稍后再试。", true);
+      } finally {
+        input.disabled = false;
+      }
+    });
+  });
+
+  function setStatus(status: HTMLElement, message: string, isError = false) {
+    status.textContent = message;
+    status.dataset.state = isError ? "error" : "default";
+  }
+
+  function createImageId() {
+    return crypto.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+  }
+
+  async function getImageDimensions(file: File): Promise<ImageDimensions> {
+    try {
+      if ("createImageBitmap" in window) {
+        const bitmap = await createImageBitmap(file);
+        const dimensions = { width: bitmap.width, height: bitmap.height };
+        bitmap.close();
+        return dimensions;
+      }
+
+      return await getImageElementDimensions(file);
+    } catch {
+      return { width: null, height: null };
+    }
+  }
+
+  function getImageElementDimensions(file: File): Promise<ImageDimensions> {
+    return new Promise((resolve) => {
+      const image = new Image();
+      const objectUrl = URL.createObjectURL(file);
+
+      image.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve({ width: image.naturalWidth, height: image.naturalHeight });
+      };
+
+      image.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve({ width: null, height: null });
+      };
+
+      image.src = objectUrl;
+    });
+  }
+</script>
+
+<style>
+  .image-uploader {
+    display: grid;
+    gap: 12px;
+    max-width: 640px;
+  }
+
+  .upload-status {
+    margin: 0;
+  }
+
+  .upload-status[data-state="error"] {
+    color: var(--clay);
+    font-weight: 800;
+  }
+</style>
