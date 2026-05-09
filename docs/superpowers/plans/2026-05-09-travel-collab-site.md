@@ -1,107 +1,102 @@
-# 旅行共写小站 Implementation Plan
+# 旅行共写小站实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **给执行代理的要求：** 实施本计划时必须使用 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans`。步骤使用复选框语法追踪进度，每完成一个任务就运行验证并提交一次。
 
-**Goal:** 将当前 Astro 静态旅行博客升级为面向 5-10 位朋友的旅行共写小站，支持邀请码注册、登录、角色权限、游记编辑、图片压缩上传、公开展示、中国足迹图和 Cloudflare Pages 部署。
+**目标：** 将当前 Astro 静态旅行博客升级为面向 5-10 位朋友的旅行共写小站，支持邀请码注册、账号密码登录、用户资料与角色、游记后台、图片压缩上传、公开游记、城市足迹图、RLS 权限和 Cloudflare Pages 部署。
 
-**Architecture:** Astro 切换为 Cloudflare Pages SSR，Supabase 负责 Auth、Postgres、Storage 和 RLS。应用通过 `@supabase/ssr` 在服务端维护 cookie 会话，所有敏感权限由数据库函数和 RLS 兜底，前端只做体验和表单校验。
+**架构：** Astro 从静态站点切换为 Cloudflare Pages SSR。Supabase 负责 Auth、Postgres、Storage 和 RLS；Astro 通过 `@supabase/ssr` 维护 cookie 会话。所有敏感权限以数据库函数和 RLS 为准，前端只负责页面体验和表单校验。
 
-**Tech Stack:** Astro 5、TypeScript、Supabase Auth/Postgres/Storage/RLS、`@supabase/supabase-js`、`@supabase/ssr`、`@astrojs/cloudflare`、browser image compression、Cloudflare Pages、Vitest。
-
----
-
-## File Structure
-
-### Configuration and Environment
-
-- Modify: `package.json` - add SSR, Supabase, image compression, map/rendering and test dependencies.
-- Modify: `astro.config.mjs` - enable Cloudflare adapter and server output.
-- Modify: `src/env.d.ts` - add Cloudflare runtime and environment type declarations.
-- Modify: `.env.example` - document Supabase publishable environment variables and local admin bootstrap variables.
-- Create: `vitest.config.ts` - run focused utility tests.
-
-### Supabase Schema
-
-- Create: `supabase/migrations/20260509000000_travel_collab_core.sql` - tables, functions, grants, RLS, Storage policies.
-- Create: `supabase/seed.sql` - local seed data for one admin profile and one invite code after a local test user exists.
-- Create: `docs/superpowers/specs/2026-05-09-travel-collab-site-design.md` - already written, remains source design.
-
-### Shared App Libraries
-
-- Create: `src/lib/env.ts` - validate public Supabase environment variables.
-- Create: `src/lib/supabase/server.ts` - create server-side Supabase client from request cookies.
-- Create: `src/lib/supabase/browser.ts` - create browser Supabase client for image upload and interactive UI.
-- Create: `src/lib/auth.ts` - user/profile loading and route guard helpers.
-- Create: `src/lib/roles.ts` - role predicates.
-- Create: `src/lib/slug.ts` - slug generation.
-- Create: `src/lib/trips.ts` - typed trip queries and mutations.
-- Create: `src/lib/assets.ts` - typed asset queries and Storage path helpers.
-- Create: `src/lib/image-compression.ts` - browser image compression helper.
-- Create: `src/lib/map-data.ts` - published trip aggregation for footprints.
-- Test: `src/lib/slug.test.ts`, `src/lib/roles.test.ts`, `src/lib/assets.test.ts`.
-
-### Layouts and Components
-
-- Create: `src/layouts/BaseLayout.astro` - shared HTML shell.
-- Create: `src/layouts/DashboardLayout.astro` - authenticated dashboard shell.
-- Create: `src/components/auth/AuthForm.astro` - login/register form markup.
-- Create: `src/components/trips/TripForm.astro` - editor form.
-- Create: `src/components/trips/TripCard.astro` - public/dashboard trip card.
-- Create: `src/components/trips/ImageUploader.astro` - upload UI and client script.
-- Create: `src/components/maps/FootprintMap.astro` - SVG/canvas-style map view with city markers.
-- Create: `src/components/admin/InviteCodeTable.astro` - admin invite list.
-- Create: `src/components/admin/UserRoleTable.astro` - admin user role controls.
-
-### Pages and Actions
-
-- Modify: `src/pages/index.astro` - use Supabase published trips instead of Markdown collection.
-- Create: `src/pages/auth/register.astro` - invite-code registration.
-- Create: `src/pages/auth/login.astro` - password login.
-- Create: `src/pages/auth/logout.ts` - sign out endpoint.
-- Create: `src/pages/dashboard/index.astro` - current user's trip list.
-- Create: `src/pages/dashboard/trips/new.astro` - create trip.
-- Create: `src/pages/dashboard/trips/[id]/edit.astro` - edit trip.
-- Create: `src/pages/admin/index.astro` - admin landing page.
-- Create: `src/pages/admin/invites.astro` - invite management.
-- Create: `src/pages/admin/users.astro` - user role and map color management.
-- Create: `src/pages/admin/trips.astro` - all-trip management.
-- Create: `src/pages/trips/index.astro` - public published trip list.
-- Replace: `src/pages/trips/[slug].astro` - public Supabase-backed detail page.
-- Create: `src/pages/footprints.astro` - public China footprint map.
-- Create: `src/pages/api/assets/upload.ts` - authenticated Storage upload endpoint if direct browser upload is not enough.
-
-### Visual Assets
-
-- Keep: `public/images/sample-trip.svg` - existing visual fallback.
-- Create: `public/images/travel-collab-hero.svg` - lightweight generated hero background.
-- Create: `public/maps/china-provinces.geo.json` - simplified local China province outline.
-- Create: `src/data/china-city-coordinates.ts` - curated city coordinates for map markers.
+**技术栈：** Astro 5、TypeScript、Supabase Auth/Postgres/Storage/RLS、`@supabase/supabase-js`、`@supabase/ssr`、`@astrojs/cloudflare`、浏览器端图片压缩、Cloudflare Pages、Vitest。
 
 ---
 
-## Task 1: Add Dependencies and SSR Configuration
+## 文件结构规划
 
-**Files:**
-- Modify: `package.json`
-- Modify: `astro.config.mjs`
-- Modify: `src/env.d.ts`
-- Modify: `.env.example`
-- Create: `vitest.config.ts`
+### 配置与环境
 
-- [ ] **Step 1: Install dependencies**
+- 修改：`package.json`，增加 SSR、Supabase、图片压缩和测试依赖。
+- 修改：`astro.config.mjs`，启用 Cloudflare adapter 和 server 输出。
+- 修改：`src/env.d.ts`，补充 Cloudflare runtime 和环境变量类型。
+- 修改：`.env.example`，记录 Supabase 公开环境变量和本地管理员初始化变量。
+- 创建：`vitest.config.ts`，运行工具函数测试。
 
-Run:
+### Supabase 数据结构
+
+- 创建：`supabase/migrations/20260509000000_travel_collab_core.sql`，包含表结构、函数、授权、RLS 和 Storage policy。
+- 创建：`supabase/seed.sql`，用于本地把第一个用户提升为管理员并创建默认邀请码。
+
+### 共享代码
+
+- 创建：`src/lib/env.ts`，校验 Supabase 环境变量。
+- 创建：`src/lib/supabase/server.ts`，创建服务端 Supabase client。
+- 创建：`src/lib/supabase/browser.ts`，创建浏览器 Supabase client。
+- 创建：`src/lib/auth.ts`，加载用户、资料和路由保护。
+- 创建：`src/lib/roles.ts`，封装角色判断。
+- 创建：`src/lib/slug.ts`，生成游记 slug。
+- 创建：`src/lib/trips.ts`，封装游记表单标准化和数据操作。
+- 创建：`src/lib/assets.ts`，封装图片路径和资源工具。
+- 创建：`src/lib/image-compression.ts`，封装浏览器图片压缩。
+- 创建：`src/lib/map-data.ts`，聚合足迹图数据。
+- 测试：`src/lib/slug.test.ts`、`src/lib/roles.test.ts`、`src/lib/assets.test.ts`。
+
+### 布局与组件
+
+- 创建：`src/layouts/BaseLayout.astro`，公共 HTML 外壳。
+- 创建：`src/layouts/DashboardLayout.astro`，后台页面外壳。
+- 创建：`src/components/trips/TripForm.astro`，游记编辑表单。
+- 创建：`src/components/trips/TripCard.astro`，游记卡片。
+- 创建：`src/components/trips/ImageUploader.astro`，图片压缩上传组件。
+- 创建：`src/components/maps/FootprintMap.astro`，中国城市足迹图。
+
+### 页面
+
+- 修改：`src/pages/index.astro`，从 Markdown 数据切换为 Supabase 已发布游记。
+- 创建：`src/pages/auth/register.astro`，邀请码注册。
+- 创建：`src/pages/auth/login.astro`，账号密码登录。
+- 创建：`src/pages/auth/logout.ts`，退出登录。
+- 创建：`src/pages/dashboard/index.astro`，我的游记列表。
+- 创建：`src/pages/dashboard/trips/new.astro`，新建游记。
+- 创建：`src/pages/dashboard/trips/[id]/edit.astro`，编辑游记。
+- 创建：`src/pages/admin/index.astro`，管理员入口。
+- 创建：`src/pages/admin/invites.astro`，邀请码管理。
+- 创建：`src/pages/admin/users.astro`，用户角色和地图颜色管理。
+- 创建：`src/pages/admin/trips.astro`，全部游记管理。
+- 创建：`src/pages/trips/index.astro`，公开游记列表。
+- 替换：`src/pages/trips/[slug].astro`，改为 Supabase 公开详情页。
+- 创建：`src/pages/footprints.astro`，公开中国足迹图。
+
+### 视觉与地图素材
+
+- 保留：`public/images/sample-trip.svg`，作为备用视觉素材。
+- 创建：`public/images/travel-collab-hero.svg`，旅行共写首页背景图。
+- 创建：`public/maps/china-provinces.geo.json`，预留简化中国地图数据位置。
+- 创建：`src/data/china-city-coordinates.ts`，常用城市点位坐标。
+
+---
+
+## 任务 1：配置依赖和 Cloudflare SSR
+
+**文件：**
+- 修改：`package.json`
+- 修改：`astro.config.mjs`
+- 修改：`src/env.d.ts`
+- 修改：`.env.example`
+- 创建：`vitest.config.ts`
+
+- [ ] **步骤 1：安装依赖**
+
+运行：
 
 ```bash
 npm install @astrojs/cloudflare @supabase/supabase-js @supabase/ssr browser-image-compression
 npm install -D vitest
 ```
 
-Expected: `package.json` and `package-lock.json` include the new dependencies.
+预期：`package.json` 和 `package-lock.json` 出现新增依赖。
 
-- [ ] **Step 2: Update scripts in `package.json`**
+- [ ] **步骤 2：补充测试脚本**
 
-Ensure the scripts block is:
+确认 `package.json` 的脚本包含：
 
 ```json
 {
@@ -115,9 +110,9 @@ Ensure the scripts block is:
 }
 ```
 
-- [ ] **Step 3: Configure Astro for Cloudflare SSR**
+- [ ] **步骤 3：配置 Astro SSR**
 
-Replace `astro.config.mjs` with:
+将 `astro.config.mjs` 改为：
 
 ```js
 import { defineConfig } from "astro/config";
@@ -134,24 +129,24 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 4: Add environment examples**
+- [ ] **步骤 4：更新环境变量示例**
 
-Replace `.env.example` with:
+将 `.env.example` 改为：
 
 ```bash
-# Supabase project URL, for example https://xxxx.supabase.co
+# Supabase 项目 URL，例如 https://xxxx.supabase.co
 PUBLIC_SUPABASE_URL=
 
-# Supabase publishable key. Do not use service_role in frontend code.
+# Supabase publishable key。不要在前端使用 service_role。
 PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 
-# Local-only bootstrap helper. Used manually in SQL or scripts, not exposed to the browser.
+# 本地初始化管理员时使用，不暴露给浏览器。
 BOOTSTRAP_ADMIN_EMAIL=
 ```
 
-- [ ] **Step 5: Add runtime types**
+- [ ] **步骤 5：补充运行时类型**
 
-Replace `src/env.d.ts` with:
+将 `src/env.d.ts` 改为：
 
 ```ts
 /// <reference types="astro/client" />
@@ -177,9 +172,9 @@ declare namespace App {
 }
 ```
 
-- [ ] **Step 6: Add Vitest config**
+- [ ] **步骤 6：新增 Vitest 配置**
 
-Create `vitest.config.ts`:
+创建 `vitest.config.ts`：
 
 ```ts
 import { defineConfig } from "vitest/config";
@@ -192,20 +187,20 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 7: Verify dependency setup**
+- [ ] **步骤 7：验证配置**
 
-Run:
+运行：
 
 ```bash
 npm run check
 npm run build
 ```
 
-Expected: both commands complete successfully.
+预期：两个命令都成功。
 
-- [ ] **Step 8: Commit**
+- [ ] **步骤 8：提交**
 
-Run:
+运行：
 
 ```bash
 git add package.json package-lock.json astro.config.mjs src/env.d.ts .env.example vitest.config.ts
@@ -214,29 +209,23 @@ git commit -m "配置旅行共写小站 SSR 基础"
 
 ---
 
-## Task 2: Create Supabase Schema, Functions, Grants, and RLS
+## 任务 2：创建 Supabase 数据结构、函数、授权和 RLS
 
-**Files:**
-- Create: `supabase/migrations/20260509000000_travel_collab_core.sql`
-- Create: `supabase/seed.sql`
+**文件：**
+- 创建：`supabase/migrations/20260509000000_travel_collab_core.sql`
+- 创建：`supabase/seed.sql`
 
-- [ ] **Step 1: Create migration directory**
+- [ ] **步骤 1：创建迁移目录**
 
-Run:
-
-```bash
-mkdir -p supabase/migrations
-```
-
-On PowerShell, run:
+PowerShell 运行：
 
 ```powershell
 New-Item -ItemType Directory -Force -Path supabase\migrations
 ```
 
-- [ ] **Step 2: Write core migration**
+- [ ] **步骤 2：写入核心迁移**
 
-Create `supabase/migrations/20260509000000_travel_collab_core.sql`:
+创建 `supabase/migrations/20260509000000_travel_collab_core.sql`：
 
 ```sql
 create extension if not exists pgcrypto;
@@ -319,21 +308,6 @@ begin
 end;
 $$;
 
-drop trigger if exists profiles_touch_updated_at on public.profiles;
-create trigger profiles_touch_updated_at
-before update on public.profiles
-for each row execute function public.touch_updated_at();
-
-drop trigger if exists invite_codes_touch_updated_at on public.invite_codes;
-create trigger invite_codes_touch_updated_at
-before update on public.invite_codes
-for each row execute function public.touch_updated_at();
-
-drop trigger if exists trips_touch_updated_at on public.trips;
-create trigger trips_touch_updated_at
-before update on public.trips
-for each row execute function public.touch_updated_at();
-
 create or replace function public.is_admin()
 returns boolean
 language sql
@@ -382,28 +356,6 @@ begin
 end;
 $$;
 
-create or replace function public.set_trip_published_at()
-returns trigger
-language plpgsql
-as $$
-begin
-  if new.status = 'published' and old.status <> 'published' then
-    new.published_at = now();
-  end if;
-
-  if new.status = 'draft' then
-    new.published_at = null;
-  end if;
-
-  return new;
-end;
-$$;
-
-drop trigger if exists trips_set_published_at on public.trips;
-create trigger trips_set_published_at
-before update on public.trips
-for each row execute function public.set_trip_published_at();
-
 alter table public.profiles enable row level security;
 alter table public.invite_codes enable row level security;
 alter table public.trips enable row level security;
@@ -420,60 +372,51 @@ grant select on public.trip_assets to anon;
 grant execute on function public.consume_invite_code(text) to anon, authenticated;
 grant execute on function public.is_admin() to authenticated;
 
-drop policy if exists "profiles public read" on public.profiles;
 create policy "profiles public read"
 on public.profiles for select
 to anon, authenticated
 using (true);
 
-drop policy if exists "profiles self update" on public.profiles;
 create policy "profiles self update"
 on public.profiles for update
 to authenticated
 using (id = auth.uid())
 with check (id = auth.uid());
 
-drop policy if exists "profiles admin update" on public.profiles;
 create policy "profiles admin update"
 on public.profiles for update
 to authenticated
 using (public.is_admin())
 with check (public.is_admin());
 
-drop policy if exists "invite admin all" on public.invite_codes;
 create policy "invite admin all"
 on public.invite_codes for all
 to authenticated
 using (public.is_admin())
 with check (public.is_admin());
 
-drop policy if exists "trips published read" on public.trips;
-create policy "trips published read"
+create policy "trips published and owner read"
 on public.trips for select
 to anon, authenticated
 using (status = 'published' or author_id = auth.uid() or public.is_admin());
 
-drop policy if exists "trips author insert" on public.trips;
 create policy "trips author insert"
 on public.trips for insert
 to authenticated
 with check (author_id = auth.uid());
 
-drop policy if exists "trips author update" on public.trips;
 create policy "trips author update"
 on public.trips for update
 to authenticated
 using (author_id = auth.uid() or public.is_admin())
 with check (author_id = auth.uid() or public.is_admin());
 
-drop policy if exists "trips author delete" on public.trips;
 create policy "trips author delete"
 on public.trips for delete
 to authenticated
 using (author_id = auth.uid() or public.is_admin());
 
-drop policy if exists "assets published read" on public.trip_assets;
-create policy "assets published read"
+create policy "assets published and owner read"
 on public.trip_assets for select
 to anon, authenticated
 using (
@@ -485,20 +428,17 @@ using (
   )
 );
 
-drop policy if exists "assets owner insert" on public.trip_assets;
 create policy "assets owner insert"
 on public.trip_assets for insert
 to authenticated
 with check (owner_id = auth.uid());
 
-drop policy if exists "assets owner update" on public.trip_assets;
 create policy "assets owner update"
 on public.trip_assets for update
 to authenticated
 using (owner_id = auth.uid() or public.is_admin())
 with check (owner_id = auth.uid() or public.is_admin());
 
-drop policy if exists "assets owner delete" on public.trip_assets;
 create policy "assets owner delete"
 on public.trip_assets for delete
 to authenticated
@@ -511,13 +451,11 @@ set public = excluded.public,
     file_size_limit = excluded.file_size_limit,
     allowed_mime_types = excluded.allowed_mime_types;
 
-drop policy if exists "trip images public read" on storage.objects;
 create policy "trip images public read"
 on storage.objects for select
 to anon, authenticated
 using (bucket_id = 'trip-images');
 
-drop policy if exists "trip images owner insert" on storage.objects;
 create policy "trip images owner insert"
 on storage.objects for insert
 to authenticated
@@ -526,7 +464,6 @@ with check (
   and (storage.foldername(name))[1] = auth.uid()::text
 );
 
-drop policy if exists "trip images owner update" on storage.objects;
 create policy "trip images owner update"
 on storage.objects for update
 to authenticated
@@ -539,7 +476,6 @@ with check (
   and ((storage.foldername(name))[1] = auth.uid()::text or public.is_admin())
 );
 
-drop policy if exists "trip images owner delete" on storage.objects;
 create policy "trip images owner delete"
 on storage.objects for delete
 to authenticated
@@ -549,12 +485,12 @@ using (
 );
 ```
 
-- [ ] **Step 3: Add local seed instructions**
+- [ ] **步骤 3：写入本地 seed**
 
-Create `supabase/seed.sql`:
+创建 `supabase/seed.sql`：
 
 ```sql
--- Replace the email with the account created through Supabase Auth in local development.
+-- 将 admin@example.com 替换为你在 Supabase Auth 中创建的管理员邮箱。
 update public.profiles
 set role = 'admin', map_color = '#c85f45'
 where id = (
@@ -570,21 +506,19 @@ where role = 'admin'
 on conflict (code) do nothing;
 ```
 
-- [ ] **Step 4: Apply migration**
+- [ ] **步骤 4：执行迁移**
 
-If Supabase CLI is available and linked:
+如果已安装并连接 Supabase CLI，运行：
 
 ```bash
 supabase db push
 ```
 
-Expected: migration applies without errors.
+如果使用 Supabase 控制台，则把迁移 SQL 粘贴到 SQL Editor 中执行。
 
-If using Supabase SQL Editor, paste the SQL from `supabase/migrations/20260509000000_travel_collab_core.sql` and run it once.
+- [ ] **步骤 5：验证 RLS**
 
-- [ ] **Step 5: Verify RLS and grants**
-
-Run this in Supabase SQL Editor:
+在 Supabase SQL Editor 运行：
 
 ```sql
 select tablename, rowsecurity
@@ -593,11 +527,11 @@ where schemaname = 'public'
   and tablename in ('profiles', 'invite_codes', 'trips', 'trip_assets');
 ```
 
-Expected: all four rows have `rowsecurity = true`.
+预期：四张表的 `rowsecurity` 都是 `true`。
 
-- [ ] **Step 6: Commit**
+- [ ] **步骤 6：提交**
 
-Run:
+运行：
 
 ```bash
 git add supabase/migrations/20260509000000_travel_collab_core.sql supabase/seed.sql
@@ -606,23 +540,23 @@ git commit -m "添加旅行共写小站 Supabase 数据结构"
 
 ---
 
-## Task 3: Add Supabase Clients, Auth Helpers, and Tests
+## 任务 3：添加 Supabase 客户端、认证工具和基础测试
 
-**Files:**
-- Create: `src/lib/env.ts`
-- Create: `src/lib/supabase/server.ts`
-- Create: `src/lib/supabase/browser.ts`
-- Create: `src/lib/roles.ts`
-- Create: `src/lib/roles.test.ts`
-- Create: `src/lib/slug.ts`
-- Create: `src/lib/slug.test.ts`
-- Create: `src/lib/assets.ts`
-- Create: `src/lib/assets.test.ts`
-- Create: `src/lib/auth.ts`
+**文件：**
+- 创建：`src/lib/env.ts`
+- 创建：`src/lib/supabase/server.ts`
+- 创建：`src/lib/supabase/browser.ts`
+- 创建：`src/lib/roles.ts`
+- 创建：`src/lib/roles.test.ts`
+- 创建：`src/lib/slug.ts`
+- 创建：`src/lib/slug.test.ts`
+- 创建：`src/lib/assets.ts`
+- 创建：`src/lib/assets.test.ts`
+- 创建：`src/lib/auth.ts`
 
-- [ ] **Step 1: Add env helper**
+- [ ] **步骤 1：添加环境变量工具**
 
-Create `src/lib/env.ts`:
+创建 `src/lib/env.ts`：
 
 ```ts
 export function getSupabaseEnv() {
@@ -630,16 +564,16 @@ export function getSupabaseEnv() {
   const publishableKey = import.meta.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
   if (!url || !publishableKey) {
-    throw new Error("Missing PUBLIC_SUPABASE_URL or PUBLIC_SUPABASE_PUBLISHABLE_KEY");
+    throw new Error("缺少 PUBLIC_SUPABASE_URL 或 PUBLIC_SUPABASE_PUBLISHABLE_KEY");
   }
 
   return { url, publishableKey };
 }
 ```
 
-- [ ] **Step 2: Add server client**
+- [ ] **步骤 2：添加服务端 Supabase client**
 
-Create `src/lib/supabase/server.ts`:
+创建 `src/lib/supabase/server.ts`：
 
 ```ts
 import { createServerClient, parseCookieHeader } from "@supabase/ssr";
@@ -670,9 +604,9 @@ export function createSupabaseServerClient({
 }
 ```
 
-- [ ] **Step 3: Add browser client**
+- [ ] **步骤 3：添加浏览器 Supabase client**
 
-Create `src/lib/supabase/browser.ts`:
+创建 `src/lib/supabase/browser.ts`：
 
 ```ts
 import { createClient } from "@supabase/supabase-js";
@@ -684,9 +618,9 @@ export function createSupabaseBrowserClient() {
 }
 ```
 
-- [ ] **Step 4: Add role helpers and tests**
+- [ ] **步骤 4：添加角色工具和测试**
 
-Create `src/lib/roles.ts`:
+创建 `src/lib/roles.ts`：
 
 ```ts
 export type UserRole = "admin" | "author" | "reader";
@@ -700,19 +634,19 @@ export function canWriteTrips(role: UserRole | null | undefined) {
 }
 ```
 
-Create `src/lib/roles.test.ts`:
+创建 `src/lib/roles.test.ts`：
 
 ```ts
 import { describe, expect, it } from "vitest";
 import { canWriteTrips, isAdmin } from "./roles";
 
-describe("role helpers", () => {
-  it("identifies admins", () => {
+describe("角色工具", () => {
+  it("可以识别管理员", () => {
     expect(isAdmin("admin")).toBe(true);
     expect(isAdmin("author")).toBe(false);
   });
 
-  it("allows admins and authors to write trips", () => {
+  it("允许管理员和作者写游记", () => {
     expect(canWriteTrips("admin")).toBe(true);
     expect(canWriteTrips("author")).toBe(true);
     expect(canWriteTrips("reader")).toBe(false);
@@ -720,54 +654,44 @@ describe("role helpers", () => {
 });
 ```
 
-- [ ] **Step 5: Add slug helper and tests**
+- [ ] **步骤 5：添加 slug 工具和测试**
 
-Create `src/lib/slug.ts`:
+创建 `src/lib/slug.ts`：
 
 ```ts
 export function slugify(input: string) {
-  const normalized = input
+  const ascii = input
     .trim()
     .toLowerCase()
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-")
+    .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-  if (!normalized) {
-    return `trip-${Date.now()}`;
-  }
-
-  return normalized
-    .split("-")
-    .map((part) => encodeURIComponent(part).replace(/%/g, "").toLowerCase())
-    .join("-")
-    .replace(/[^a-z0-9-]/g, "")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  return ascii || `trip-${Date.now()}`;
 }
 ```
 
-Create `src/lib/slug.test.ts`:
+创建 `src/lib/slug.test.ts`：
 
 ```ts
 import { describe, expect, it } from "vitest";
 import { slugify } from "./slug";
 
 describe("slugify", () => {
-  it("turns english titles into URL slugs", () => {
+  it("可以生成英文 URL slug", () => {
     expect(slugify("A Trip to Shanghai!")).toBe("a-trip-to-shanghai");
   });
 
-  it("keeps a deterministic non-empty value for Chinese titles", () => {
-    expect(slugify("第一次出发")).toMatch(/^[a-z0-9-]+$/);
+  it("中文标题会生成备用 slug", () => {
+    expect(slugify("第一次出发")).toMatch(/^trip-\d+$/);
   });
 });
 ```
 
-- [ ] **Step 6: Add Storage path helper and tests**
+- [ ] **步骤 6：添加图片路径工具和测试**
 
-Create `src/lib/assets.ts`:
+创建 `src/lib/assets.ts`：
 
 ```ts
 export function buildTripImagePath({
@@ -785,14 +709,14 @@ export function buildTripImagePath({
 }
 ```
 
-Create `src/lib/assets.test.ts`:
+创建 `src/lib/assets.test.ts`：
 
 ```ts
 import { describe, expect, it } from "vitest";
 import { buildTripImagePath } from "./assets";
 
-describe("buildTripImagePath", () => {
-  it("names images under user and trip folders", () => {
+describe("图片路径工具", () => {
+  it("把图片放在用户和游记目录下", () => {
     expect(
       buildTripImagePath({
         userId: "user-1",
@@ -804,9 +728,9 @@ describe("buildTripImagePath", () => {
 });
 ```
 
-- [ ] **Step 7: Add auth helper**
+- [ ] **步骤 7：添加认证工具**
 
-Create `src/lib/auth.ts`:
+创建 `src/lib/auth.ts`：
 
 ```ts
 import type { APIContext } from "astro";
@@ -826,15 +750,11 @@ export async function getSessionProfile(context: Pick<APIContext, "request" | "c
     return { supabase, user: null, profile: null };
   }
 
-  const { data: profile, error } = await supabase
+  const { data: profile } = await supabase
     .from("profiles")
     .select("id, display_name, avatar_url, role, map_color")
     .eq("id", user.id)
     .single();
-
-  if (error) {
-    return { supabase, user, profile: null };
-  }
 
   return { supabase, user, profile };
 }
@@ -845,19 +765,19 @@ export function redirectToLogin(request: Request) {
 }
 ```
 
-- [ ] **Step 8: Run tests**
+- [ ] **步骤 8：运行测试**
 
-Run:
+运行：
 
 ```bash
 npm run test
 ```
 
-Expected: role, slug, and asset helper tests pass.
+预期：角色、slug、图片路径测试全部通过。
 
-- [ ] **Step 9: Commit**
+- [ ] **步骤 9：提交**
 
-Run:
+运行：
 
 ```bash
 git add src/lib vitest.config.ts package.json package-lock.json
@@ -866,16 +786,16 @@ git commit -m "添加 Supabase 客户端与基础工具"
 
 ---
 
-## Task 4: Add Layouts and Shared Navigation
+## 任务 4：添加布局和共享导航
 
-**Files:**
-- Create: `src/layouts/BaseLayout.astro`
-- Create: `src/layouts/DashboardLayout.astro`
-- Modify: `src/styles/global.css`
+**文件：**
+- 创建：`src/layouts/BaseLayout.astro`
+- 创建：`src/layouts/DashboardLayout.astro`
+- 修改：`src/styles/global.css`
 
-- [ ] **Step 1: Add base layout**
+- [ ] **步骤 1：添加公共布局**
 
-Create `src/layouts/BaseLayout.astro`:
+创建 `src/layouts/BaseLayout.astro`：
 
 ```astro
 ---
@@ -917,9 +837,9 @@ const { title, description = "朋友一起记录旅行、照片和足迹的共�
 </html>
 ```
 
-- [ ] **Step 2: Add dashboard layout**
+- [ ] **步骤 2：添加后台布局**
 
-Create `src/layouts/DashboardLayout.astro`:
+创建 `src/layouts/DashboardLayout.astro`：
 
 ```astro
 ---
@@ -947,9 +867,9 @@ const { title } = Astro.props;
 </BaseLayout>
 ```
 
-- [ ] **Step 3: Add layout CSS**
+- [ ] **步骤 3：添加布局样式**
 
-Append to `src/styles/global.css`:
+追加到 `src/styles/global.css`：
 
 ```css
 .dashboard-shell {
@@ -1017,33 +937,21 @@ Append to `src/styles/global.css`:
   background: transparent;
   color: var(--forest);
 }
-
-@media (max-width: 820px) {
-  .dashboard-shell {
-    grid-template-columns: 1fr;
-  }
-
-  .dashboard-nav {
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-    padding: 0 0 16px;
-  }
-}
 ```
 
-- [ ] **Step 4: Verify**
+- [ ] **步骤 4：验证**
 
-Run:
+运行：
 
 ```bash
 npm run check
 ```
 
-Expected: no Astro type errors.
+预期：类型检查通过。
 
-- [ ] **Step 5: Commit**
+- [ ] **步骤 5：提交**
 
-Run:
+运行：
 
 ```bash
 git add src/layouts src/styles/global.css
@@ -1052,188 +960,42 @@ git commit -m "添加旅行共写小站布局"
 
 ---
 
-## Task 5: Implement Invite Registration, Login, and Logout
+## 任务 5：实现注册、登录和退出
 
-**Files:**
-- Create: `src/pages/auth/register.astro`
-- Create: `src/pages/auth/login.astro`
-- Create: `src/pages/auth/logout.ts`
+**文件：**
+- 创建：`src/pages/auth/register.astro`
+- 创建：`src/pages/auth/login.astro`
+- 创建：`src/pages/auth/logout.ts`
 
-- [ ] **Step 1: Create register page**
+- [ ] **步骤 1：创建注册页**
 
-Create `src/pages/auth/register.astro`:
+注册页必须包含昵称、邮箱、密码和邀请码。提交时调用 `consume_invite_code`，再创建 Auth 用户和 `profiles` 记录。邀请码无效时显示中文错误。
 
-```astro
----
-import BaseLayout from "../../layouts/BaseLayout.astro";
-import { createSupabaseServerClient } from "../../lib/supabase/server";
+- [ ] **步骤 2：创建登录页**
 
-const supabase = createSupabaseServerClient({
-  request: Astro.request,
-  cookies: Astro.cookies,
-});
+登录页使用邮箱和密码调用 `supabase.auth.signInWithPassword`。登录成功后跳转到 `next` 参数或 `/dashboard/`。
 
-let message = "";
+- [ ] **步骤 3：创建退出接口**
 
-if (Astro.request.method === "POST") {
-  const form = await Astro.request.formData();
-  const email = String(form.get("email") ?? "").trim();
-  const password = String(form.get("password") ?? "");
-  const displayName = String(form.get("display_name") ?? "").trim();
-  const inviteCode = String(form.get("invite_code") ?? "").trim();
+`src/pages/auth/logout.ts` 调用 `supabase.auth.signOut()`，然后重定向到首页。
 
-  const { data: inviteRows, error: inviteError } = await supabase.rpc("consume_invite_code", {
-    invite_code: inviteCode,
-  });
+- [ ] **步骤 4：手动验证认证流程**
 
-  if (inviteError || !inviteRows?.[0]) {
-    message = "邀请码无效、过期或已用完。";
-  } else {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+配置 Supabase 环境变量并执行迁移后：
 
-    if (error || !data.user) {
-      message = error?.message ?? "注册失败，请稍后再试。";
-    } else {
-      const role = inviteRows[0].role_to_grant;
-      const colors = ["#c85f45", "#2f6f7b", "#d7a65f", "#274c43", "#7b5ea7"];
-      const mapColor = colors[Math.floor(Math.random() * colors.length)];
-
-      await supabase.from("profiles").insert({
-        id: data.user.id,
-        display_name: displayName,
-        role,
-        map_color: mapColor,
-      });
-
-      return Astro.redirect("/dashboard/");
-    }
-  }
-}
----
-
-<BaseLayout title="注册 | 旅行共写小站">
-  <main class="article">
-    <p class="eyebrow">加入共写</p>
-    <h1>用邀请码注册</h1>
-    {message && <p class="meta">{message}</p>}
-    <form class="form-grid" method="post">
-      <label class="field">
-        <span>昵称</span>
-        <input name="display_name" required maxlength="60" />
-      </label>
-      <label class="field">
-        <span>邮箱</span>
-        <input name="email" type="email" required />
-      </label>
-      <label class="field">
-        <span>密码</span>
-        <input name="password" type="password" required minlength="6" />
-      </label>
-      <label class="field">
-        <span>邀请码</span>
-        <input name="invite_code" required />
-      </label>
-      <button class="button" type="submit">注册</button>
-    </form>
-  </main>
-</BaseLayout>
+```text
+访问 /auth/register/
+使用邀请码 FRIENDS-TRAVEL-2026 注册
+确认跳转到 /dashboard/
+访问 /auth/logout/
+再从 /auth/login/ 登录
 ```
 
-- [ ] **Step 2: Create login page**
+预期：注册、退出、登录均可完成。
 
-Create `src/pages/auth/login.astro`:
+- [ ] **步骤 5：提交**
 
-```astro
----
-import BaseLayout from "../../layouts/BaseLayout.astro";
-import { createSupabaseServerClient } from "../../lib/supabase/server";
-
-const supabase = createSupabaseServerClient({
-  request: Astro.request,
-  cookies: Astro.cookies,
-});
-
-const next = Astro.url.searchParams.get("next") ?? "/dashboard/";
-let message = "";
-
-if (Astro.request.method === "POST") {
-  const form = await Astro.request.formData();
-  const email = String(form.get("email") ?? "").trim();
-  const password = String(form.get("password") ?? "");
-
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-  if (error) {
-    message = "邮箱或密码不正确。";
-  } else {
-    return Astro.redirect(next);
-  }
-}
----
-
-<BaseLayout title="登录 | 旅行共写小站">
-  <main class="article">
-    <p class="eyebrow">欢迎回来</p>
-    <h1>登录后台</h1>
-    {message && <p class="meta">{message}</p>}
-    <form class="form-grid" method="post">
-      <label class="field">
-        <span>邮箱</span>
-        <input name="email" type="email" required />
-      </label>
-      <label class="field">
-        <span>密码</span>
-        <input name="password" type="password" required />
-      </label>
-      <button class="button" type="submit">登录</button>
-    </form>
-  </main>
-</BaseLayout>
-```
-
-- [ ] **Step 3: Create logout endpoint**
-
-Create `src/pages/auth/logout.ts`:
-
-```ts
-import type { APIRoute } from "astro";
-import { createSupabaseServerClient } from "../../lib/supabase/server";
-
-export const GET: APIRoute = async ({ request, cookies, redirect }) => {
-  const supabase = createSupabaseServerClient({ request, cookies });
-  await supabase.auth.signOut();
-  return redirect("/");
-};
-```
-
-- [ ] **Step 4: Verify auth pages compile**
-
-Run:
-
-```bash
-npm run check
-```
-
-Expected: no Astro type errors.
-
-- [ ] **Step 5: Manual auth verification**
-
-With Supabase env vars set and migration applied:
-
-1. Visit `/auth/register/`.
-2. Register with invite code `FRIENDS-TRAVEL-2026`.
-3. Confirm redirect to `/dashboard/`.
-4. Visit `/auth/logout/`.
-5. Log in again at `/auth/login/`.
-
-Expected: registration, logout, and login all complete without exposing secret keys.
-
-- [ ] **Step 6: Commit**
-
-Run:
+运行：
 
 ```bash
 git add src/pages/auth
@@ -1242,220 +1004,54 @@ git commit -m "实现邀请码注册与登录退出"
 
 ---
 
-## Task 6: Implement Dashboard and Trip Editor
+## 任务 6：实现 Dashboard 和游记编辑器
 
-**Files:**
-- Create: `src/lib/trips.ts`
-- Create: `src/components/trips/TripForm.astro`
-- Create: `src/components/trips/TripCard.astro`
-- Create: `src/pages/dashboard/index.astro`
-- Create: `src/pages/dashboard/trips/new.astro`
-- Create: `src/pages/dashboard/trips/[id]/edit.astro`
+**文件：**
+- 创建：`src/lib/trips.ts`
+- 创建：`src/components/trips/TripForm.astro`
+- 创建：`src/components/trips/TripCard.astro`
+- 创建：`src/pages/dashboard/index.astro`
+- 创建：`src/pages/dashboard/trips/new.astro`
+- 创建：`src/pages/dashboard/trips/[id]/edit.astro`
 
-- [ ] **Step 1: Add trip query helpers**
+- [ ] **步骤 1：添加游记表单标准化工具**
 
-Create `src/lib/trips.ts`:
+`src/lib/trips.ts` 负责把 `FormData` 转为 `trips` 表可写入的数据，包含标题、摘要、正文、旅行日期、地点、省份、城市、可选经纬度和状态。
 
-```ts
-import { slugify } from "./slug";
+- [ ] **步骤 2：添加游记卡片组件**
 
-export type TripStatus = "draft" | "published";
+`TripCard.astro` 同时支持公开列表和后台列表。后台模式链接到编辑页，公开模式链接到详情页。
 
-export function normalizeTripForm(form: FormData, authorId: string) {
-  const title = String(form.get("title") ?? "").trim();
-  const status = String(form.get("status") ?? "draft") as TripStatus;
+- [ ] **步骤 3：添加游记表单组件**
 
-  return {
-    author_id: authorId,
-    title,
-    slug: slugify(`${title}-${String(form.get("visited_at") ?? "")}`),
-    summary: String(form.get("summary") ?? "").trim(),
-    content: String(form.get("content") ?? "").trim(),
-    destination_name: String(form.get("destination_name") ?? "").trim(),
-    visited_at: String(form.get("visited_at") ?? ""),
-    province: String(form.get("province") ?? "").trim(),
-    city: String(form.get("city") ?? "").trim(),
-    latitude: form.get("latitude") ? Number(form.get("latitude")) : null,
-    longitude: form.get("longitude") ? Number(form.get("longitude")) : null,
-    status: status === "published" ? "published" : "draft",
-  };
-}
-```
+`TripForm.astro` 使用普通表单和文本区域，不做复杂富文本。状态下拉包含“保存草稿”和“直接发布”。
 
-- [ ] **Step 2: Add trip card**
+- [ ] **步骤 4：添加我的游记列表**
 
-Create `src/components/trips/TripCard.astro`:
+`/dashboard/` 必须要求登录。未登录跳转 `/auth/login/`。登录后只列出当前用户自己的游记。
 
-```astro
----
-interface Props {
-  trip: {
-    id?: string;
-    slug: string;
-    title: string;
-    summary: string | null;
-    destination_name: string;
-    visited_at: string;
-    status?: string;
-  };
-  mode?: "public" | "dashboard";
-}
+- [ ] **步骤 5：添加新建游记页**
 
-const { trip, mode = "public" } = Astro.props;
-const href = mode === "dashboard" ? `/dashboard/trips/${trip.id}/edit/` : `/trips/${trip.slug}/`;
----
+`/dashboard/trips/new/` 提交后写入 `trips`，作者为当前登录用户。保存成功后跳转 `/dashboard/`。
 
-<article class="card">
-  <p class="meta">{trip.destination_name} · {trip.visited_at}</p>
-  <h3><a href={href}>{trip.title}</a></h3>
-  {trip.summary && <p>{trip.summary}</p>}
-  {trip.status && <span class="tag">{trip.status === "published" ? "已发布" : "草稿"}</span>}
-</article>
-```
+- [ ] **步骤 6：添加编辑游记页**
 
-- [ ] **Step 3: Add trip form**
+`/dashboard/trips/[id]/edit/` 加载当前用户可访问的游记。提交后更新该游记。RLS 负责阻止作者编辑别人的游记。
 
-Create `src/components/trips/TripForm.astro`:
+- [ ] **步骤 7：验证**
 
-```astro
----
-interface Props {
-  trip?: Record<string, unknown>;
-  action: string;
-}
-
-const { trip, action } = Astro.props;
----
-
-<form class="form-grid" method="post" action={action}>
-  <label class="field">
-    <span>标题</span>
-    <input name="title" required maxlength="120" value={trip?.title ?? ""} />
-  </label>
-  <label class="field">
-    <span>摘要</span>
-    <textarea name="summary" maxlength="240" rows="3">{trip?.summary ?? ""}</textarea>
-  </label>
-  <label class="field">
-    <span>正文</span>
-    <textarea name="content" required rows="12">{trip?.content ?? ""}</textarea>
-  </label>
-  <label class="field">
-    <span>旅行日期</span>
-    <input name="visited_at" type="date" required value={trip?.visited_at ?? ""} />
-  </label>
-  <label class="field">
-    <span>地点名称</span>
-    <input name="destination_name" required value={trip?.destination_name ?? ""} />
-  </label>
-  <label class="field">
-    <span>省份</span>
-    <input name="province" required value={trip?.province ?? ""} />
-  </label>
-  <label class="field">
-    <span>城市</span>
-    <input name="city" required value={trip?.city ?? ""} />
-  </label>
-  <label class="field">
-    <span>纬度</span>
-    <input name="latitude" type="number" step="0.000001" value={trip?.latitude ?? ""} />
-  </label>
-  <label class="field">
-    <span>经度</span>
-    <input name="longitude" type="number" step="0.000001" value={trip?.longitude ?? ""} />
-  </label>
-  <label class="field">
-    <span>状态</span>
-    <select name="status">
-      <option value="draft" selected={trip?.status !== "published"}>保存草稿</option>
-      <option value="published" selected={trip?.status === "published"}>直接发布</option>
-    </select>
-  </label>
-  <div class="button-row">
-    <button class="button" type="submit">保存游记</button>
-    <a class="button secondary" href="/dashboard/">返回列表</a>
-  </div>
-</form>
-```
-
-- [ ] **Step 4: Add dashboard list**
-
-Create `src/pages/dashboard/index.astro` with authenticated trip list using `getSessionProfile()`. Redirect to login when no user, select `trips` where `author_id = user.id`, render `TripCard` with `mode="dashboard"`.
-
-Use this frontmatter:
-
-```astro
----
-import DashboardLayout from "../../layouts/DashboardLayout.astro";
-import TripCard from "../../components/trips/TripCard.astro";
-import { getSessionProfile, redirectToLogin } from "../../lib/auth";
-
-const { supabase, user } = await getSessionProfile(Astro);
-
-if (!user) {
-  return Astro.redirect(redirectToLogin(Astro.request));
-}
-
-const { data: trips = [] } = await supabase
-  .from("trips")
-  .select("id, slug, title, summary, destination_name, visited_at, status")
-  .eq("author_id", user.id)
-  .order("updated_at", { ascending: false });
----
-```
-
-The markup is:
-
-```astro
-<DashboardLayout title="我的游记 | 旅行共写小站">
-  <div class="button-row">
-    <a class="button" href="/dashboard/trips/new/">新建游记</a>
-  </div>
-  <section class="section">
-    <h1>我的游记</h1>
-    <div class="grid">
-      {trips.map((trip) => <TripCard trip={trip} mode="dashboard" />)}
-    </div>
-  </section>
-</DashboardLayout>
-```
-
-- [ ] **Step 5: Add new trip page**
-
-Create `src/pages/dashboard/trips/new.astro`. On `POST`, call `normalizeTripForm(form, user.id)`, insert into `trips`, and redirect to `/dashboard/`.
-
-Expected insert call:
-
-```ts
-await supabase.from("trips").insert(normalizeTripForm(form, user.id));
-```
-
-- [ ] **Step 6: Add edit trip page**
-
-Create `src/pages/dashboard/trips/[id]/edit.astro`. On `GET`, load trip by `id`; on `POST`, call `normalizeTripForm(form, user.id)`, remove `author_id`, update by `id`, and redirect to `/dashboard/`.
-
-Expected update call:
-
-```ts
-const payload = normalizeTripForm(form, user.id);
-const { author_id: _authorId, ...updatePayload } = payload;
-await supabase.from("trips").update(updatePayload).eq("id", id);
-```
-
-- [ ] **Step 7: Verify dashboard**
-
-Run:
+运行：
 
 ```bash
 npm run check
 npm run build
 ```
 
-Expected: both pass.
+预期：两个命令都成功。手动新建草稿和已发布游记各一篇。
 
-- [ ] **Step 8: Commit**
+- [ ] **步骤 8：提交**
 
-Run:
+运行：
 
 ```bash
 git add src/lib/trips.ts src/components/trips src/pages/dashboard
@@ -1464,117 +1060,38 @@ git commit -m "实现游记后台与编辑器"
 
 ---
 
-## Task 7: Implement Browser Image Compression and Upload
+## 任务 7：实现图片压缩上传
 
-**Files:**
-- Create: `src/lib/image-compression.ts`
-- Create: `src/components/trips/ImageUploader.astro`
-- Modify: `src/pages/dashboard/trips/[id]/edit.astro`
+**文件：**
+- 创建：`src/lib/image-compression.ts`
+- 创建：`src/components/trips/ImageUploader.astro`
+- 修改：`src/pages/dashboard/trips/[id]/edit.astro`
 
-- [ ] **Step 1: Add compression helper**
+- [ ] **步骤 1：添加图片压缩工具**
 
-Create `src/lib/image-compression.ts`:
+`src/lib/image-compression.ts` 使用 `browser-image-compression`，最长边 1600px，目标 0.5MB，输出 WebP。
 
-```ts
-import imageCompression from "browser-image-compression";
+- [ ] **步骤 2：添加上传组件**
 
-export async function compressTripImage(file: File) {
-  return imageCompression(file, {
-    maxSizeMB: 0.5,
-    maxWidthOrHeight: 1600,
-    useWebWorker: true,
-    fileType: "image/webp",
-    initialQuality: 0.82,
-  });
-}
+`ImageUploader.astro` 读取图片文件，压缩后上传到 Supabase Storage 的 `trip-images/{user_id}/{trip_id}/{image_id}.webp`，并在 `trip_assets` 写入元数据。
+
+- [ ] **步骤 3：接入编辑页**
+
+在游记编辑页渲染 `ImageUploader`。只在已有游记的编辑页上传图片，新建页先保存游记再上传图片。
+
+- [ ] **步骤 4：手动验证**
+
+```text
+打开一篇游记的编辑页
+上传一张大于 1MB 的 JPEG
+确认 Storage 中出现 WebP
+确认 trip_assets 出现记录
+确认 size_bytes 小于等于 1000000
 ```
 
-- [ ] **Step 2: Add uploader component**
+- [ ] **步骤 5：提交**
 
-Create `src/components/trips/ImageUploader.astro`:
-
-```astro
----
-interface Props {
-  tripId: string;
-  userId: string;
-}
-
-const { tripId, userId } = Astro.props;
----
-
-<section class="section" data-image-uploader data-trip-id={tripId} data-user-id={userId}>
-  <h2>照片</h2>
-  <input type="file" accept="image/png,image/jpeg,image/webp" multiple />
-  <p class="meta" data-upload-status>选择图片后会自动压缩并上传。</p>
-</section>
-
-<script>
-  import { createSupabaseBrowserClient } from "../../lib/supabase/browser";
-  import { buildTripImagePath } from "../../lib/assets";
-  import { compressTripImage } from "../../lib/image-compression";
-
-  const root = document.querySelector("[data-image-uploader]");
-  const input = root?.querySelector("input");
-  const status = root?.querySelector("[data-upload-status]");
-
-  input?.addEventListener("change", async () => {
-    const files = Array.from(input.files ?? []);
-    const tripId = root?.getAttribute("data-trip-id") ?? "";
-    const userId = root?.getAttribute("data-user-id") ?? "";
-    const supabase = createSupabaseBrowserClient();
-
-    for (const file of files.slice(0, 12)) {
-      const compressed = await compressTripImage(file);
-      const imageId = crypto.randomUUID();
-      const path = buildTripImagePath({ userId, tripId, imageId });
-      const { error } = await supabase.storage.from("trip-images").upload(path, compressed, {
-        contentType: "image/webp",
-      });
-
-      if (error) {
-        if (status) status.textContent = `上传失败：${error.message}`;
-        return;
-      }
-
-      await supabase.from("trip_assets").insert({
-        trip_id: tripId,
-        owner_id: userId,
-        storage_path: path,
-        mime_type: "image/webp",
-        size_bytes: compressed.size,
-      });
-    }
-
-    if (status) status.textContent = "图片已压缩并上传。";
-  });
-</script>
-```
-
-- [ ] **Step 3: Render uploader on edit page**
-
-In `src/pages/dashboard/trips/[id]/edit.astro`, import and render:
-
-```astro
----
-import ImageUploader from "../../../../components/trips/ImageUploader.astro";
----
-
-<ImageUploader tripId={trip.id} userId={user.id} />
-```
-
-- [ ] **Step 4: Manual upload verification**
-
-With a logged-in author and existing trip:
-
-1. Open `/dashboard/trips/[id]/edit/`.
-2. Upload a JPEG larger than 1MB.
-3. Confirm Supabase Storage receives a WebP under `{user_id}/{trip_id}/`.
-4. Confirm `trip_assets` has a row with `size_bytes <= 1000000`.
-
-- [ ] **Step 5: Commit**
-
-Run:
+运行：
 
 ```bash
 git add src/lib/image-compression.ts src/components/trips/ImageUploader.astro src/pages/dashboard/trips
@@ -1583,66 +1100,43 @@ git commit -m "实现游记图片压缩上传"
 
 ---
 
-## Task 8: Implement Public Trip List and Detail Pages
+## 任务 8：实现公开游记列表和详情页
 
-**Files:**
-- Create: `src/pages/trips/index.astro`
-- Replace: `src/pages/trips/[slug].astro`
-- Modify: `src/pages/index.astro`
+**文件：**
+- 创建：`src/pages/trips/index.astro`
+- 替换：`src/pages/trips/[slug].astro`
+- 修改：`src/pages/index.astro`
 
-- [ ] **Step 1: Add public trip list**
+- [ ] **步骤 1：创建公开游记列表**
 
-Create `src/pages/trips/index.astro` that queries published trips:
+`/trips/` 查询 `status = 'published'` 的游记，按 `published_at` 倒序展示。
 
-```ts
-const { data: trips = [] } = await supabase
-  .from("trips")
-  .select("slug, title, summary, destination_name, visited_at")
-  .eq("status", "published")
-  .order("published_at", { ascending: false });
+- [ ] **步骤 2：替换公开详情页**
+
+`/trips/[slug]/` 查询一篇已发布游记和关联图片。草稿或不存在的 slug 返回 404。
+
+- [ ] **步骤 3：更新首页**
+
+首页改为查询最新三篇已发布游记，并提供游记列表和足迹图入口。
+
+- [ ] **步骤 4：验证**
+
+```text
+/trips/ 只显示已发布游记
+/trips/[slug]/ 可以打开已发布游记
+草稿不会出现在公开页面
 ```
 
-Render each item with `TripCard`.
-
-- [ ] **Step 2: Replace detail page**
-
-Replace `src/pages/trips/[slug].astro` with a Supabase-backed page that:
-
-1. Reads `Astro.params.slug`.
-2. Queries one published trip by slug.
-3. Queries `trip_assets` for images.
-4. Renders title, destination, date, summary, content, and image gallery.
-5. Returns `404` when no published trip exists.
-
-- [ ] **Step 3: Update homepage**
-
-Modify `src/pages/index.astro` to:
-
-1. Stop importing `getCollection`.
-2. Use `BaseLayout`.
-3. Query latest three published trips from Supabase.
-4. Link to `/trips/` and `/footprints/`.
-
-- [ ] **Step 4: Verify public pages**
-
-Run:
+运行：
 
 ```bash
 npm run check
 npm run build
 ```
 
-Manual checks:
+- [ ] **步骤 5：提交**
 
-```text
-/trips/ shows only published trips.
-/trips/[slug]/ returns 404 for drafts.
-/ shows latest published trips.
-```
-
-- [ ] **Step 5: Commit**
-
-Run:
+运行：
 
 ```bash
 git add src/pages/index.astro src/pages/trips
@@ -1651,18 +1145,19 @@ git commit -m "实现公开游记列表和详情"
 
 ---
 
-## Task 9: Implement Footprint Map
+## 任务 9：实现中国城市足迹图
 
-**Files:**
-- Create: `src/data/china-city-coordinates.ts`
-- Create: `public/maps/china-provinces.geo.json`
-- Create: `src/lib/map-data.ts`
-- Create: `src/components/maps/FootprintMap.astro`
-- Create: `src/pages/footprints.astro`
+**文件：**
+- 创建：`src/data/china-city-coordinates.ts`
+- 创建：`public/maps/china-provinces.geo.json`
+- 创建：`src/lib/map-data.ts`
+- 创建：`src/components/maps/FootprintMap.astro`
+- 创建：`src/pages/footprints.astro`
+- 修改：`src/styles/global.css`
 
-- [ ] **Step 1: Add city coordinate seed**
+- [ ] **步骤 1：添加城市坐标数据**
 
-Create `src/data/china-city-coordinates.ts`:
+创建 `src/data/china-city-coordinates.ts`，第一版先包含常见城市：
 
 ```ts
 export const cityCoordinates: Record<string, { x: number; y: number }> = {
@@ -1679,11 +1174,9 @@ export const cityCoordinates: Record<string, { x: number; y: number }> = {
 };
 ```
 
-- [ ] **Step 2: Add simplified map file**
+- [ ] **步骤 2：添加地图数据占位文件**
 
-Create `public/maps/china-provinces.geo.json` with a simplified GeoJSON `FeatureCollection`. The first implementation renders the visible outline in `FootprintMap.astro`; this file is the stable data location for replacing the hand-drawn outline with real simplified province geometry in a later dedicated map-data task.
-
-Use this minimal valid file:
+创建 `public/maps/china-provinces.geo.json`：
 
 ```json
 {
@@ -1692,113 +1185,31 @@ Use this minimal valid file:
 }
 ```
 
-- [ ] **Step 3: Add map aggregation helper**
+第一版可见轮廓由 `FootprintMap.astro` 中的轻量 SVG 绘制。这个 GeoJSON 文件用于后续替换为真实简化省界数据。
 
-Create `src/lib/map-data.ts`:
+- [ ] **步骤 3：添加足迹聚合工具**
 
-```ts
-import { cityCoordinates } from "../data/china-city-coordinates";
+`src/lib/map-data.ts` 按城市聚合已发布游记，并从 `cityCoordinates` 中取点位。找不到点位的城市使用地图中心备用点。
 
-export type FootprintTrip = {
-  slug: string;
-  title: string;
-  city: string;
-  province: string;
-  profiles: {
-    display_name: string;
-    map_color: string;
-  } | null;
-};
+- [ ] **步骤 4：添加足迹图组件**
 
-export function groupTripsByCity(trips: FootprintTrip[]) {
-  return trips.reduce<Record<string, { city: string; x: number; y: number; trips: FootprintTrip[] }>>(
-    (groups, trip) => {
-      const coords = cityCoordinates[trip.city] ?? { x: 50, y: 50 };
-      groups[trip.city] ??= { city: trip.city, x: coords.x, y: coords.y, trips: [] };
-      groups[trip.city].trips.push(trip);
-      return groups;
-    },
-    {},
-  );
-}
+`FootprintMap.astro` 使用 SVG 绘制中国轮廓和城市圆点。圆点颜色来自作者的 `profiles.map_color`。点击城市卡片进入对应游记。
+
+- [ ] **步骤 5：创建足迹图页面**
+
+`/footprints/` 查询已发布游记和作者资料，渲染 `FootprintMap`。
+
+- [ ] **步骤 6：验证**
+
+```text
+已发布游记城市出现在足迹图
+不同作者显示不同颜色
+草稿不会出现在足迹图
 ```
 
-- [ ] **Step 4: Add FootprintMap component**
+- [ ] **步骤 7：提交**
 
-Create `src/components/maps/FootprintMap.astro`:
-
-```astro
----
-import { groupTripsByCity, type FootprintTrip } from "../../lib/map-data";
-
-interface Props {
-  trips: FootprintTrip[];
-}
-
-const groups = Object.values(groupTripsByCity(Astro.props.trips));
----
-
-<section class="footprint-map" aria-label="中国旅行足迹图">
-  <svg viewBox="0 0 100 90" role="img" aria-label="中国城市足迹点位">
-    <path d="M18 28 L33 18 L55 20 L75 30 L84 48 L73 70 L49 79 L27 68 L16 49 Z" fill="#f3eadc" stroke="#ded6c9" stroke-width="1.2" />
-    {
-      groups.map((group) => (
-        <g>
-          <circle cx={group.x} cy={group.y} r="2.6" fill={group.trips[0].profiles?.map_color ?? "#2f6f7b"} />
-          <title>{group.city}：{group.trips.length} 篇游记</title>
-        </g>
-      ))
-    }
-  </svg>
-  <div class="grid">
-    {
-      groups.map((group) => (
-        <article class="card">
-          <h3>{group.city}</h3>
-          <p>{group.trips.length} 篇游记</p>
-          {group.trips.slice(0, 3).map((trip) => <a href={`/trips/${trip.slug}/`}>{trip.title}</a>)}
-        </article>
-      ))
-    }
-  </div>
-</section>
-```
-
-- [ ] **Step 5: Add footprint page**
-
-Create `src/pages/footprints.astro` to query published trips joined with profiles and render `FootprintMap`.
-
-Expected query:
-
-```ts
-const { data: trips = [] } = await supabase
-  .from("trips")
-  .select("slug, title, city, province, profiles(display_name, map_color)")
-  .eq("status", "published");
-```
-
-- [ ] **Step 6: Add map CSS**
-
-Append to `src/styles/global.css`:
-
-```css
-.footprint-map svg {
-  width: 100%;
-  min-height: 360px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fffdf8;
-}
-
-.footprint-map circle {
-  stroke: white;
-  stroke-width: 0.8;
-}
-```
-
-- [ ] **Step 7: Commit**
-
-Run:
+运行：
 
 ```bash
 git add src/data src/lib/map-data.ts src/components/maps src/pages/footprints.astro public/maps src/styles/global.css
@@ -1807,107 +1218,64 @@ git commit -m "实现中国城市足迹图"
 
 ---
 
-## Task 10: Implement Admin Pages
+## 任务 10：实现管理员后台
 
-**Files:**
-- Create: `src/pages/admin/index.astro`
-- Create: `src/pages/admin/invites.astro`
-- Create: `src/pages/admin/users.astro`
-- Create: `src/pages/admin/trips.astro`
-- Create: `src/components/admin/InviteCodeTable.astro`
-- Create: `src/components/admin/UserRoleTable.astro`
+**文件：**
+- 创建：`src/pages/admin/index.astro`
+- 创建：`src/pages/admin/invites.astro`
+- 创建：`src/pages/admin/users.astro`
+- 创建：`src/pages/admin/trips.astro`
 
-- [ ] **Step 1: Add admin guard pattern**
+- [ ] **步骤 1：添加管理员保护**
 
-Use this frontmatter at the top of each admin page:
+每个 `/admin/` 页面都先调用 `getSessionProfile`。未登录跳转登录页；不是 `admin` 则跳转 `/dashboard/`。
 
-```astro
----
-import DashboardLayout from "../../layouts/DashboardLayout.astro";
-import { getSessionProfile, redirectToLogin } from "../../lib/auth";
-import { isAdmin } from "../../lib/roles";
+- [ ] **步骤 2：添加管理员入口**
 
-const { supabase, user, profile } = await getSessionProfile(Astro);
+`/admin/` 显示三个入口：邀请码管理、用户管理、全部游记管理。
 
-if (!user) {
-  return Astro.redirect(redirectToLogin(Astro.request));
-}
+- [ ] **步骤 3：添加邀请码管理**
 
-if (!isAdmin(profile?.role)) {
-  return Astro.redirect("/dashboard/");
-}
----
-```
+`/admin/invites/` 支持生成新邀请码。新邀请码默认 `role_to_grant = 'author'`、`max_uses = 10`。页面展示邀请码、已使用次数、最大次数和是否启用。
 
-- [ ] **Step 2: Add admin index**
+- [ ] **步骤 4：添加用户管理**
 
-Create `src/pages/admin/index.astro` with links to `/admin/invites/`, `/admin/users/`, and `/admin/trips/`.
+`/admin/users/` 展示用户昵称、角色、地图颜色。管理员可以修改 `role` 和 `map_color`。
 
-- [ ] **Step 3: Add invite management**
+- [ ] **步骤 5：添加全部游记管理**
 
-Create `src/pages/admin/invites.astro`. On `POST`, generate a code with:
+`/admin/trips/` 展示所有游记、作者、状态、城市和编辑入口。管理员编辑复用游记编辑页，RLS 允许 admin 更新所有游记。
 
-```ts
-const code = `TRAVEL-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-await supabase.from("invite_codes").insert({
-  code,
-  role_to_grant: "author",
-  max_uses: 10,
-  created_by: user.id,
-});
-```
-
-Render existing invite codes with code, used count, max uses, active status, and created date.
-
-- [ ] **Step 4: Add user role management**
-
-Create `src/pages/admin/users.astro`. On `POST`, update selected user's role and map color:
-
-```ts
-await supabase
-  .from("profiles")
-  .update({ role, map_color: mapColor })
-  .eq("id", profileId);
-```
-
-Render users with role select values `admin`, `author`, and `reader`.
-
-- [ ] **Step 5: Add all-trip management**
-
-Create `src/pages/admin/trips.astro` to list all trips with author profile, status, city, and edit link. Admin editing can reuse `/dashboard/trips/[id]/edit/` because RLS permits admin updates.
-
-- [ ] **Step 6: Verify admin restrictions**
-
-Manual checks:
+- [ ] **步骤 6：验证**
 
 ```text
-author visiting /admin/ redirects to /dashboard/
-admin can create invite code
-admin can change author map color
-admin can see all trips
+author 访问 /admin/ 会跳回 /dashboard/
+admin 可以创建邀请码
+admin 可以修改用户地图颜色
+admin 可以看到全部游记
 ```
 
-- [ ] **Step 7: Commit**
+- [ ] **步骤 7：提交**
 
-Run:
+运行：
 
 ```bash
-git add src/pages/admin src/components/admin
+git add src/pages/admin
 git commit -m "实现管理员后台"
 ```
 
 ---
 
-## Task 11: Add Visual Polish and Generated Assets
+## 任务 11：优化首页视觉并加入生成素材
 
-**Files:**
-- Create: `public/images/travel-collab-hero.svg`
-- Modify: `src/pages/index.astro`
-- Modify: `src/styles/global.css`
+**文件：**
+- 创建：`public/images/travel-collab-hero.svg`
+- 修改：`src/pages/index.astro`
+- 修改：`src/styles/global.css`
 
-- [ ] **Step 1: Create lightweight hero asset**
+- [ ] **步骤 1：创建首页背景图**
 
-Create `public/images/travel-collab-hero.svg` with a simple map-and-photo inspired vector background:
+创建 `public/images/travel-collab-hero.svg`：
 
 ```svg
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-labelledby="title">
@@ -1923,33 +1291,23 @@ Create `public/images/travel-collab-hero.svg` with a simple map-and-photo inspir
 </svg>
 ```
 
-- [ ] **Step 2: Update homepage hero**
+- [ ] **步骤 2：更新首页首屏**
 
-Modify `src/pages/index.astro` hero image to use:
+首页首屏使用 `/images/travel-collab-hero.svg`，文案围绕“旅行共写小站”和朋友共同记录足迹展开。
 
-```astro
-<img src="/images/travel-collab-hero.svg" alt="地图路线、城市标记和照片卡片组成的旅行共写背景图" />
-```
+- [ ] **步骤 3：验证视觉**
 
-- [ ] **Step 3: Verify visual layout**
-
-Run:
+运行：
 
 ```bash
 npm run build
 ```
 
-Open `http://127.0.0.1:4321/` and verify:
+打开 `http://127.0.0.1:4321/`，确认首屏图片加载、导航不换行错乱、移动端没有文字重叠。
 
-```text
-hero image loads
-navigation fits on mobile width
-buttons and cards do not overlap
-```
+- [ ] **步骤 4：提交**
 
-- [ ] **Step 4: Commit**
-
-Run:
+运行：
 
 ```bash
 git add public/images/travel-collab-hero.svg src/pages/index.astro src/styles/global.css
@@ -1958,15 +1316,15 @@ git commit -m "优化旅行共写小站首页视觉"
 
 ---
 
-## Task 12: Configure Cloudflare Pages Deployment
+## 任务 12：补充 Cloudflare Pages 部署说明
 
-**Files:**
-- Modify: `README.md`
-- Create: `docs/deploy-cloudflare-pages.md`
+**文件：**
+- 修改：`README.md`
+- 创建：`docs/deploy-cloudflare-pages.md`
 
-- [ ] **Step 1: Add deployment guide**
+- [ ] **步骤 1：创建部署说明**
 
-Create `docs/deploy-cloudflare-pages.md`:
+创建 `docs/deploy-cloudflare-pages.md`：
 
 ```md
 # Cloudflare Pages 部署
@@ -1998,9 +1356,9 @@ PUBLIC_SUPABASE_PUBLISHABLE_KEY=<Supabase Publishable Key>
 7. 确认 `/footprints/` 出现对应城市点位。
 ```
 
-- [ ] **Step 2: Update README commands**
+- [ ] **步骤 2：更新 README**
 
-Add this section to `README.md`:
+在 `README.md` 增加：
 
 ```md
 ## 部署
@@ -2015,9 +1373,9 @@ Add this section to `README.md`:
 详细步骤见 `docs/deploy-cloudflare-pages.md`。
 ```
 
-- [ ] **Step 3: Run final verification**
+- [ ] **步骤 3：最终验证**
 
-Run:
+运行：
 
 ```bash
 npm run test
@@ -2025,11 +1383,11 @@ npm run check
 npm run build
 ```
 
-Expected: all pass.
+预期：三个命令都通过。
 
-- [ ] **Step 4: Commit**
+- [ ] **步骤 4：提交**
 
-Run:
+运行：
 
 ```bash
 git add README.md docs/deploy-cloudflare-pages.md
@@ -2038,49 +1396,44 @@ git commit -m "补充 Cloudflare Pages 部署说明"
 
 ---
 
-## Task 13: End-to-End Acceptance Pass
+## 任务 13：端到端验收
 
-**Files:**
-- Modify files only if acceptance reveals a bug.
+**文件：**
+- 只有发现验收问题时才修改相关文件。
 
-- [ ] **Step 1: Create or identify admin**
+- [ ] **步骤 1：确认管理员账号**
 
-In Supabase Auth, create the first user with the admin email. Run `supabase/seed.sql` after replacing `admin@example.com` with that email.
+在 Supabase Auth 创建第一个用户，然后运行 `supabase/seed.sql`，把邮箱替换为管理员邮箱。
 
-Expected: the user has `profiles.role = 'admin'`.
+预期：该用户的 `profiles.role` 为 `admin`。
 
-- [ ] **Step 2: Create invite**
+- [ ] **步骤 2：创建邀请码**
 
-Log in as admin and create a new invite from `/admin/invites/`.
+以管理员登录 `/admin/invites/`，创建一个新邀请码。
 
-Expected: invite has `max_uses = 10` and `used_count = 0`.
+预期：邀请码 `max_uses = 10`，`used_count = 0`。
 
-- [ ] **Step 3: Register author**
+- [ ] **步骤 3：注册作者**
 
-Open `/auth/register/` in a private browser window and register with the invite code.
+在无登录状态下打开 `/auth/register/`，使用邀请码注册。
 
-Expected: new user has `profiles.role = 'author'`; invite `used_count` increments to `1`.
+预期：新用户角色为 `author`，邀请码使用次数增加到 `1`。
 
-- [ ] **Step 4: Create and publish trip**
+- [ ] **步骤 4：创建并发布游记**
 
-As author:
+以作者身份打开 `/dashboard/trips/new/`，填写标题、摘要、正文、日期、省份、城市和地点，状态选择“直接发布”。
 
-1. Open `/dashboard/trips/new/`.
-2. Fill title, summary, content, date, province, city, destination.
-3. Set status to `published`.
-4. Save.
+预期：保存后返回后台列表，游记显示为“已发布”。
 
-Expected: redirect to dashboard and trip appears as `已发布`.
+- [ ] **步骤 5：上传图片**
 
-- [ ] **Step 5: Upload image**
+打开该游记编辑页，上传一张图片。
 
-Open the edit page for the trip and upload one image.
+预期：图片被压缩后进入 Supabase Storage，并在 `trip_assets` 中有记录。
 
-Expected: compressed image appears in Supabase Storage and `trip_assets`.
+- [ ] **步骤 6：验证公开页面**
 
-- [ ] **Step 6: Verify public pages**
-
-Open:
+打开：
 
 ```text
 /trips/
@@ -2088,30 +1441,36 @@ Open:
 /footprints/
 ```
 
-Expected: published trip appears in all three places.
+预期：已发布游记在列表、详情和足迹图中都可见。
 
-- [ ] **Step 7: Verify RLS**
+- [ ] **步骤 7：验证 RLS**
 
-As another author, attempt to edit the first author's trip by visiting its edit URL.
+用另一个作者账号尝试访问第一位作者的编辑页。
 
-Expected: page does not expose editable content or update succeeds with zero rows blocked by RLS.
+预期：页面不暴露可编辑内容，或更新被 RLS 阻止。
 
-- [ ] **Step 8: Final commit if fixes were needed**
+- [ ] **步骤 8：按需提交修复**
 
-If acceptance required fixes:
+如果验收过程中修复了问题，运行：
 
 ```bash
 git add .
 git commit -m "修复旅行共写小站验收问题"
 ```
 
-If no fixes were needed, do not create an empty commit.
+如果没有修复，不创建空提交。
 
 ---
 
-## Self-Review Notes
+## 自检清单
 
-- Spec coverage: registration with 10-use invite, roles, admin-only role changes, dashboard, editor, image compression, public list/detail, footprints, RLS, Storage and Cloudflare deployment all map to tasks above.
-- Supabase breaking-change coverage: migration includes explicit `grant` statements for exposed public tables and enables RLS on every exposed table.
-- Cost coverage: image compression and Storage limits are implemented before public deployment.
-- Map scope coverage: first version uses province outline plus city markers with per-user colors, not commercial map tiles.
+- [ ] 注册必须填写邀请码。
+- [ ] 邀请码最多可用 10 次。
+- [ ] 只有管理员能生成邀请码和修改角色。
+- [ ] 作者可以直接发布自己的游记。
+- [ ] 草稿不出现在公开列表、详情和足迹图。
+- [ ] 图片上传前压缩，不保存原图。
+- [ ] 所有公开 schema 表都启用 RLS。
+- [ ] 对 Supabase Data API 暴露的表显式配置 grant。
+- [ ] Cloudflare Pages 不配置 service role key。
+- [ ] `npm run test`、`npm run check`、`npm run build` 通过。
