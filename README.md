@@ -39,6 +39,19 @@ coordinates:
 - `npm run build`：生成生产构建。
 - `npm run preview`：预览生产构建。
 
+## 部署
+
+项目使用 Cloudflare Pages 部署。构建命令为 `npm run build`，输出目录为 `dist`。
+
+部署前需要在 Cloudflare Pages 中配置：
+
+- `PUBLIC_SUPABASE_URL`
+- `PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+
+部署前还需要先执行 Supabase migration，并准备管理员或邀请码账号。
+
+详细步骤见 [docs/deploy-cloudflare-pages.md](docs/deploy-cloudflare-pages.md)。
+
 ## 项目约定
 
 所有文档、代码注释和 Git 提交信息均使用中文。
