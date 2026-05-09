@@ -1,0 +1,106 @@
+---
+import type { CityFootprint } from "../../lib/map-data";
+
+interface Props {
+  footprints: CityFootprint[];
+}
+
+const { footprints } = Astro.props;
+
+function projectPoint({ x, y }: Pick<CityFootprint, "x" | "y">) {
+  return {
+    x: (x / 100) * 720,
+    y: (y / 100) * 520,
+  };
+}
+
+function markerRadius(tripCount: number) {
+  return Math.min(17, 8 + tripCount * 2);
+}
+---
+
+<div class="footprint-map" aria-labelledby="footprint-map-title">
+  <div class="footprint-canvas">
+    <svg
+      class="china-map"
+      viewBox="0 0 720 520"
+      role="img"
+      aria-labelledby="footprint-map-title footprint-map-desc"
+    >
+      <title id="footprint-map-title">中国城市足迹图</title>
+      <desc id="footprint-map-desc">地图上标记已发布游记覆盖的城市，并用作者颜色区分足迹。</desc>
+      <path
+        class="china-outline"
+        d="M145 104 L246 72 L348 90 L457 70 L559 112 L620 189 L590 260 L640 327 L559 400 L433 423 L337 470 L254 423 L163 388 L105 307 L78 214 Z"
+      />
+      <path
+        class="china-river"
+        d="M176 287 C244 255 284 306 351 278 C420 249 456 296 539 260"
+      />
+      {
+        footprints.map((footprint) => {
+          const point = projectPoint(footprint);
+          const radius = markerRadius(footprint.trips.length);
+          const color = footprint.authorColors[0] ?? "#2f6f7b";
+
+          return (
+            <g class="map-marker">
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r={radius + 5}
+                class="map-marker-halo"
+              />
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r={radius}
+                fill={color}
+                class="map-marker-dot"
+              >
+                <title>{`${footprint.city}，${footprint.trips.length} 篇游记`}</title>
+              </circle>
+              <text x={point.x + radius + 8} y={point.y + 5}>
+                {footprint.city}
+              </text>
+            </g>
+          );
+        })
+      }
+    </svg>
+  </div>
+
+  <div class="footprint-city-grid" aria-label="城市游记列表">
+    {
+      footprints.map((footprint) => (
+        <article class="footprint-card">
+          <div class="footprint-card-header">
+            <div>
+              <p class="meta">
+                {footprint.isFallbackLocation ? "位置待校准" : "城市足迹"} ·{" "}
+                {footprint.trips.length} 篇
+              </p>
+              <h3>{footprint.city}</h3>
+            </div>
+            <div class="author-swatch-list" aria-label="作者颜色">
+              {footprint.authorColors.map((color) => (
+                <span class="author-swatch" style={`--swatch-color: ${color}`}></span>
+              ))}
+            </div>
+          </div>
+
+          <ul class="footprint-trip-list">
+            {footprint.trips.map((trip) => (
+              <li>
+                <a href={`/trips/${trip.slug}/`}>{trip.title}</a>
+                <span class="meta">
+                  {trip.destinationName} · {trip.author.name}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </article>
+      ))
+    }
+  </div>
+</div>

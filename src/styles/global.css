@@ -324,6 +324,117 @@ h3 {
   background: color-mix(in srgb, var(--sun), transparent 82%);
 }
 
+.footprint-map {
+  display: grid;
+  gap: 22px;
+}
+
+.footprint-canvas {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--water), transparent 90%), transparent 36%),
+    color-mix(in srgb, white, var(--paper) 26%);
+}
+
+.china-map {
+  display: block;
+  width: 100%;
+  min-height: 320px;
+}
+
+.china-outline {
+  fill: color-mix(in srgb, var(--forest), transparent 86%);
+  stroke: var(--forest);
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.china-river {
+  fill: none;
+  stroke: color-mix(in srgb, var(--water), transparent 35%);
+  stroke-linecap: round;
+  stroke-width: 5;
+}
+
+.map-marker-halo {
+  fill: color-mix(in srgb, white, transparent 20%);
+  stroke: color-mix(in srgb, var(--forest), transparent 40%);
+  stroke-width: 1;
+}
+
+.map-marker-dot {
+  stroke: white;
+  stroke-width: 3;
+}
+
+.map-marker text {
+  fill: var(--ink);
+  font-size: 15px;
+  font-weight: 800;
+  paint-order: stroke;
+  stroke: color-mix(in srgb, white, transparent 12%);
+  stroke-width: 5;
+}
+
+.footprint-city-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.footprint-card {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, white, var(--paper) 28%);
+}
+
+.footprint-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.author-swatch-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: 112px;
+}
+
+.author-swatch {
+  width: 14px;
+  height: 14px;
+  border: 2px solid white;
+  border-radius: 999px;
+  background: var(--swatch-color, var(--water));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--forest), transparent 70%);
+}
+
+.footprint-trip-list {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.footprint-trip-list li {
+  display: grid;
+  gap: 2px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.footprint-trip-list a {
+  font-weight: 800;
+}
+
 @media (max-width: 820px) {
   .site-header,
   .hero {
@@ -336,7 +447,8 @@ h3 {
   }
 
   .grid,
-  .photo-strip {
+  .photo-strip,
+  .footprint-city-grid {
     grid-template-columns: 1fr;
   }
 

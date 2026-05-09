@@ -1,17 +1,54 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import FootprintMap from "../components/maps/FootprintMap.astro";
+import { aggregatePublishedTripsByCity, type CityFootprint, type MapTripInput } from "../lib/map-data";
+import { createSupabaseServerClient } from "../lib/supabase/server";
 
 export const prerender = false;
+
+let footprints: CityFootprint[] = [];
+let loadError: string | null = null;
+
+try {
+  const supabase = createSupabaseServerClient(Astro);
+  const { data, error } = await supabase
+    .from("trips")
+    .select(
+      "id, slug, title, city, destination_name, status, published_at, visited_at, profiles:author_id(id, display_name, map_color)",
+    )
+    .eq("status", "published")
+    .order("published_at", { ascending: false, nullsFirst: false });
+
+  if (error) {
+    loadError = "足迹数据暂时无法加载，请稍后再试。";
+  } else {
+    footprints = aggregatePublishedTripsByCity((data ?? []) as MapTripInput[]);
+  }
+} catch {
+  loadError = "足迹图尚未连接数据源，稍后再回来看看。";
+}
 ---
 
 <BaseLayout title="足迹图 - 旅行共写小站" description="查看朋友们共同记录的旅行城市足迹。">
   <section class="section">
     <p class="eyebrow">足迹图</p>
-    <h1>城市足迹图即将上线</h1>
-    <p class="lead">下一步会把已发布游记按城市聚合到地图上，展示朋友们一起走过的地方。</p>
+    <h1>朋友们走过的中国城市</h1>
+    <p class="lead">把已发布游记按城市聚合到地图上，用作者颜色留下每个人的旅行足迹。</p>
     <div class="button-row">
-      <a class="button" href="/trips/">先看公开游记</a>
+      <a class="button" href="/trips/">查看公开游记</a>
       <a class="button secondary" href="/">返回首页</a>
     </div>
+  </section>
+
+  <section class="section" aria-labelledby="footprint-list">
+    <h2 id="footprint-list">城市足迹</h2>
+    {loadError && <p class="meta" role="alert">{loadError}</p>}
+    {
+      !loadError && footprints.length > 0 ? (
+        <FootprintMap footprints={footprints} />
+      ) : (
+        !loadError && <p class="meta">还没有可展示的公开足迹。</p>
+      )
+    }
   </section>
 </BaseLayout>
