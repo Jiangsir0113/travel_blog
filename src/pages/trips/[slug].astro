@@ -1,68 +1,156 @@
 ---
-import { getCollection, render } from "astro:content";
-import "../../styles/global.css";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { createSupabaseServerClient } from "../../lib/supabase/server";
 
-export async function getStaticPaths() {
-  const trips = await getCollection("trips");
+export const prerender = false;
 
-  return trips.map((trip) => ({
-    params: { slug: trip.slug },
-    props: { trip },
-  }));
+type Trip = {
+  id: string;
+  title: string;
+  summary: string | null;
+  content: string;
+  destination_name: string;
+  visited_at: string;
+  province: string | null;
+  city: string;
+  published_at: string | null;
+};
+
+type TripAsset = {
+  id: string;
+  storage_path: string;
+  width: number | null;
+  height: number | null;
+};
+
+type DisplayAsset = TripAsset & {
+  signedUrl: string | null;
+};
+
+const slug = Astro.params.slug;
+
+if (!slug) {
+  return new Response("Not found", { status: 404 });
 }
 
-const { trip } = Astro.props;
-const { Content } = await render(trip);
+let trip: Trip | null = null;
+let assets: DisplayAsset[] = [];
+let loadError: string | null = null;
+
+try {
+  const supabase = createSupabaseServerClient(Astro);
+  const { data, error } = await supabase
+    .from("trips")
+    .select(
+      "id, title, summary, content, destination_name, visited_at, province, city, published_at",
+    )
+    .eq("slug", slug)
+    .eq("status", "published")
+    .single();
+
+  if (error?.code === "PGRST116" || (!data && !error)) {
+    return new Response("Not found", { status: 404 });
+  }
+
+  if (error) {
+    return new Response("游记读取失败，请稍后再试。", { status: 503 });
+  } else {
+    trip = data;
+  }
+
+  if (trip) {
+    const { data: assetRows } = await supabase
+      .from("trip_assets")
+      .select("id, storage_path, width, height, created_at")
+      .eq("trip_id", trip.id)
+      .order("created_at", { ascending: true });
+
+    const signedAssets = await Promise.all(
+      (assetRows ?? []).map(async (asset) => {
+        const { data: signedData, error: signedError } = await supabase.storage
+          .from("trip-images")
+          .createSignedUrl(asset.storage_path, 60 * 15);
+
+        return {
+          id: asset.id,
+          storage_path: asset.storage_path,
+          width: asset.width,
+          height: asset.height,
+          signedUrl: signedError ? null : signedData?.signedUrl ?? null,
+        };
+      }),
+    );
+
+    assets = signedAssets.filter((asset) => asset.signedUrl);
+  }
+} catch {
+  return new Response("Supabase 尚未配置，暂时无法加载这篇游记。", {
+    status: 503,
+  });
+}
+
+if (!trip && !loadError) {
+  return new Response("Not found", { status: 404 });
+}
+
 const formatDate = new Intl.DateTimeFormat("zh-CN", {
   year: "numeric",
   month: "long",
   day: "numeric",
 });
+
+const parsedVisitedAt = trip?.visited_at
+  ? new Date(`${trip.visited_at}T00:00:00`)
+  : null;
+const displayDate =
+  parsedVisitedAt && !Number.isNaN(parsedVisitedAt.valueOf())
+    ? formatDate.format(parsedVisitedAt)
+    : trip?.visited_at;
 ---
 
-<html lang="zh-CN">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="generator" content={Astro.generator} />
-    <title>{trip.data.title} | travel_blog</title>
-    <meta name="description" content={trip.data.summary} />
-  </head>
-  <body>
-    <div class="site-shell">
-      <header class="site-header">
-        <a class="brand" href="/">travel_blog</a>
-        <nav class="nav" aria-label="主导航">
-          <a href="/">首页</a>
-          <a href="/destinations/">目的地</a>
-        </nav>
-      </header>
+<BaseLayout
+  title={`${trip?.title ?? "游记暂不可用"} - 旅行共写小站`}
+  description={trip?.summary ?? "公开游记详情"}
+>
+  {
+    trip ? (
+      <article class="article">
+        <p class="eyebrow">{trip.destination_name}</p>
+        <h1>{trip.title}</h1>
+        {trip.summary && <p class="lead">{trip.summary}</p>}
+        <p class="meta">
+          {[displayDate, trip.province, trip.city].filter(Boolean).join(" · ")}
+        </p>
 
-      <main class="article">
-        <p class="eyebrow">{trip.data.destination}</p>
-        <h1>{trip.data.title}</h1>
-        <p class="lead">{trip.data.summary}</p>
-        <p class="meta">{formatDate.format(trip.data.date)}</p>
-        {
-          trip.data.heroImage && (
-            <img src={trip.data.heroImage} alt={`${trip.data.title} 的示例图片`} />
-          )
-        }
-        <div class="tag-list">
-          {
-            trip.data.tags.map((tag) => (
-              <span class="tag">{tag}</span>
-            ))
-          }
+        <div class="article-body">
+          {trip.content.split(/\r?\n/).map((line) => (
+            <p>{line || "\u00a0"}</p>
+          ))}
         </div>
-        <article class="article-body">
-          <Content />
-        </article>
-      </main>
 
-      <footer class="site-footer">
-        <p><a href="/">返回首页</a></p>
-      </footer>
-    </div>
-  </body>
-</html>
+        {assets.length > 0 && (
+          <section class="section" aria-labelledby="trip-photos">
+            <h2 id="trip-photos">照片</h2>
+            <div class="grid">
+              {assets.map((asset) => (
+                <img
+                  src={asset.signedUrl ?? asset.storage_path}
+                  width={asset.width ?? undefined}
+                  height={asset.height ?? undefined}
+                  alt={`${trip.title} 的旅行照片`}
+                  loading="lazy"
+                />
+              ))}
+            </div>
+          </section>
+        )}
+      </article>
+    ) : (
+      <section class="section">
+        <p class="eyebrow">暂不可用</p>
+        <h1>游记暂时无法加载</h1>
+        <p class="lead">{loadError}</p>
+      </section>
+    )
+  }
+</BaseLayout>

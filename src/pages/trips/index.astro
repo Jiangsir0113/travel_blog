@@ -1,0 +1,52 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import TripCard, { type TripCardTrip } from "../../components/trips/TripCard.astro";
+import { createSupabaseServerClient } from "../../lib/supabase/server";
+
+export const prerender = false;
+
+let trips: TripCardTrip[] = [];
+let loadError: string | null = null;
+
+try {
+  const supabase = createSupabaseServerClient(Astro);
+  const { data, error } = await supabase
+    .from("trips")
+    .select("id, slug, title, summary, destination_name, visited_at, province, city, status")
+    .eq("status", "published")
+    .order("published_at", { ascending: false, nullsFirst: false })
+    .limit(50);
+
+  if (error) {
+    loadError = "游记读取失败，请稍后再试。";
+  } else {
+    trips = data ?? [];
+  }
+} catch {
+  loadError = "Supabase 尚未配置，暂时无法加载公开游记。";
+}
+---
+
+<BaseLayout title="全部游记 - 旅行共写小站" description="按发布时间浏览已经发布的旅行游记。">
+  <section class="section">
+    <p class="eyebrow">公开游记</p>
+    <h1>最近发布的旅程</h1>
+    <p class="lead">按发布时间倒序整理已经发布的游记，方便从最新的故事开始读起。</p>
+  </section>
+
+  <section class="section" aria-labelledby="trip-list">
+    <h2 id="trip-list">全部游记</h2>
+    {loadError && <p class="meta" role="alert">{loadError}</p>}
+    {
+      !loadError && trips.length > 0 ? (
+        <div class="grid">
+          {trips.map((trip) => (
+            <TripCard trip={trip} mode="public" />
+          ))}
+        </div>
+      ) : (
+        !loadError && <p class="meta">还没有发布的游记。</p>
+      )
+    }
+  </section>
+</BaseLayout>
