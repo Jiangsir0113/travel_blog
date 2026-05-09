@@ -50,6 +50,7 @@ img {
 }
 
 .brand {
+  flex: 0 0 auto;
   font-size: 1.05rem;
   font-weight: 800;
   text-decoration: none;
@@ -58,7 +59,9 @@ img {
 .nav {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 16px;
+  min-width: 0;
   color: var(--muted);
   font-size: 0.95rem;
 }
@@ -116,6 +119,12 @@ h3 {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #f3eadc;
+}
+
+.hero-image img {
+  width: 100%;
+  aspect-ratio: 14 / 9;
+  object-fit: cover;
 }
 
 .section {
@@ -506,6 +515,21 @@ h3 {
   .site-header {
     align-items: flex-start;
     flex-direction: column;
+    gap: 12px;
+  }
+
+  .nav {
+    justify-content: flex-start;
+    gap: 8px 14px;
+  }
+
+  .hero {
+    gap: 26px;
+    padding: 42px 0 34px;
+  }
+
+  .hero h1 {
+    font-size: clamp(2.25rem, 13vw, 3.6rem);
   }
 
   .grid,
