@@ -1,0 +1,68 @@
+---
+import { getCollection, render } from "astro:content";
+import "../../styles/global.css";
+
+export async function getStaticPaths() {
+  const trips = await getCollection("trips");
+
+  return trips.map((trip) => ({
+    params: { slug: trip.slug },
+    props: { trip },
+  }));
+}
+
+const { trip } = Astro.props;
+const { Content } = await render(trip);
+const formatDate = new Intl.DateTimeFormat("zh-CN", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
+---
+
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{trip.data.title} | travel_blog</title>
+    <meta name="description" content={trip.data.summary} />
+  </head>
+  <body>
+    <div class="site-shell">
+      <header class="site-header">
+        <a class="brand" href="/">travel_blog</a>
+        <nav class="nav" aria-label="主导航">
+          <a href="/">首页</a>
+          <a href="/destinations/">目的地</a>
+        </nav>
+      </header>
+
+      <main class="article">
+        <p class="eyebrow">{trip.data.destination}</p>
+        <h1>{trip.data.title}</h1>
+        <p class="lead">{trip.data.summary}</p>
+        <p class="meta">{formatDate.format(trip.data.date)}</p>
+        {
+          trip.data.heroImage && (
+            <img src={trip.data.heroImage} alt={`${trip.data.title} 的示例图片`} />
+          )
+        }
+        <div class="tag-list">
+          {
+            trip.data.tags.map((tag) => (
+              <span class="tag">{tag}</span>
+            ))
+          }
+        </div>
+        <article class="article-body">
+          <Content />
+        </article>
+      </main>
+
+      <footer class="site-footer">
+        <p><a href="/">返回首页</a></p>
+      </footer>
+    </div>
+  </body>
+</html>

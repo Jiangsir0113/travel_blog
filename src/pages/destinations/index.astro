@@ -1,0 +1,67 @@
+---
+import { getCollection } from "astro:content";
+import "../../styles/global.css";
+
+const trips = await getCollection("trips");
+const destinations = Array.from(
+  trips
+    .reduce((map, trip) => {
+      const current = map.get(trip.data.destination) ?? [];
+      current.push(trip);
+      map.set(trip.data.destination, current);
+      return map;
+    }, new Map<string, typeof trips>())
+    .entries(),
+).sort(([a], [b]) => a.localeCompare(b, "zh-CN"));
+---
+
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>目的地 | travel_blog</title>
+    <meta name="description" content="按目的地整理旅行博客中的游记。" />
+  </head>
+  <body>
+    <div class="site-shell">
+      <header class="site-header">
+        <a class="brand" href="/">travel_blog</a>
+        <nav class="nav" aria-label="主导航">
+          <a href="/">首页</a>
+          <a href="/destinations/">目的地</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div>
+            <p class="eyebrow">目的地</p>
+            <h1>按地点重新打开旅程。</h1>
+            <p class="lead">这里会逐步沉淀成目的地指南、照片合集和地图入口。</p>
+          </div>
+        </section>
+
+        <section class="section" aria-labelledby="destination-list">
+          <h2 id="destination-list">全部目的地</h2>
+          <div class="grid">
+            {
+              destinations.map(([destination, entries]) => (
+                <article class="card">
+                  <p class="meta">{entries.length} 篇游记</p>
+                  <h3>{destination}</h3>
+                  <p>{entries[0].data.summary}</p>
+                  <a href={`/trips/${entries[0].slug}/`}>阅读最近一篇</a>
+                </article>
+              ))
+            }
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <p><a href="/">返回首页</a></p>
+      </footer>
+    </div>
+  </body>
+</html>

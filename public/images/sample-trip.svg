@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" role="img" aria-labelledby="title desc">
+  <title id="title">旅行博客示例图片</title>
+  <desc id="desc">山脊、河流和路线标记组成的旅行示例图。</desc>
+  <rect width="1400" height="900" fill="#f5f0e8"/>
+  <path d="M0 640 C220 540 340 590 520 500 C700 410 840 440 1010 340 C1170 245 1290 260 1400 210 L1400 900 L0 900 Z" fill="#274c43"/>
+  <path d="M0 710 C180 630 360 660 560 590 C760 520 900 545 1060 465 C1220 385 1325 405 1400 360 L1400 900 L0 900 Z" fill="#5b7f6b"/>
+  <path d="M100 810 C260 760 410 805 560 740 C730 665 830 705 980 650 C1115 595 1260 615 1400 560 L1400 900 L100 900 Z" fill="#d7a65f"/>
+  <path d="M125 210 C270 250 350 350 500 360 C660 370 750 285 900 315 C1030 340 1110 430 1270 435" fill="none" stroke="#cc5a43" stroke-width="16" stroke-linecap="round" stroke-dasharray="1 42"/>
+  <circle cx="125" cy="210" r="30" fill="#cc5a43"/>
+  <circle cx="1270" cy="435" r="30" fill="#cc5a43"/>
+  <circle cx="125" cy="210" r="12" fill="#fff8ed"/>
+  <circle cx="1270" cy="435" r="12" fill="#fff8ed"/>
+</svg>

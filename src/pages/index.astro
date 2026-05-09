@@ -1,0 +1,111 @@
+---
+import { getCollection } from "astro:content";
+import "../styles/global.css";
+
+const trips = (await getCollection("trips")).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+);
+const recentTrips = trips.slice(0, 3);
+const destinations = Array.from(
+  new Map(trips.map((trip) => [trip.data.destination, trip])).values(),
+);
+const formatDate = new Intl.DateTimeFormat("zh-CN", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
+---
+
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>travel_blog | 旅行博客</title>
+    <meta
+      name="description"
+      content="一个从内容优先开始的旅行博客，用 Markdown 记录路线、目的地和旅途中的细节。"
+    />
+  </head>
+  <body>
+    <div class="site-shell">
+      <header class="site-header">
+        <a class="brand" href="/">travel_blog</a>
+        <nav class="nav" aria-label="主导航">
+          <a href="/">首页</a>
+          <a href="/destinations/">目的地</a>
+          <a href="/trips/sample-trip/">示例游记</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div>
+            <p class="eyebrow">从第一篇游记开始</p>
+            <h1>把走过的地方，整理成可以反复回看的故事。</h1>
+            <p class="lead">
+              这里先从轻量的 Markdown 游记开始，记录目的地、路线、照片和当时的心情。
+              后续可以自然长出照片墙、地图、行程和地点收藏。
+            </p>
+          </div>
+          <div class="hero-image">
+            <img src="/images/sample-trip.svg" alt="山脊、河流和旅行路线标记组成的示例图片" />
+          </div>
+        </section>
+
+        <section class="section" aria-labelledby="recent-trips">
+          <h2 id="recent-trips">最近游记</h2>
+          <div class="grid">
+            {
+              recentTrips.map((trip) => (
+                <article class="card">
+                  <p class="meta">
+                    {trip.data.destination} · {formatDate.format(trip.data.date)}
+                  </p>
+                  <h3>
+                    <a href={`/trips/${trip.slug}/`}>{trip.data.title}</a>
+                  </h3>
+                  <p>{trip.data.summary}</p>
+                  <div class="tag-list">
+                    {trip.data.tags.map((tag) => (
+                      <span class="tag">{tag}</span>
+                    ))}
+                  </div>
+                </article>
+              ))
+            }
+          </div>
+        </section>
+
+        <section class="section" aria-labelledby="destinations">
+          <h2 id="destinations">目的地入口</h2>
+          <div class="grid">
+            {
+              destinations.map((trip) => (
+                <article class="card">
+                  <p class="meta">目的地</p>
+                  <h3>{trip.data.destination}</h3>
+                  <p>{trip.data.summary}</p>
+                  <a href="/destinations/">查看目的地</a>
+                </article>
+              ))
+            }
+          </div>
+        </section>
+
+        <section class="section" aria-labelledby="photos">
+          <h2 id="photos">照片预览</h2>
+          <div class="photo-strip">
+            <div class="photo-tile">山脊路线</div>
+            <div class="photo-tile">城市清晨</div>
+            <div class="photo-tile">途中片刻</div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <p>用 Astro 和 Markdown 记录旅行。下一步可以加入真实照片、地图和行程视图。</p>
+      </footer>
+    </div>
+  </body>
+</html>
