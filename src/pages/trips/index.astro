@@ -1,15 +1,20 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import TripCard, { type TripCardTrip } from "../../components/trips/TripCard.astro";
-import { createSupabaseServerClient } from "../../lib/supabase/server";
+import { getSessionProfile } from "../../lib/auth";
 
 export const prerender = false;
+
+const { supabase, user, profile } = await getSessionProfile(Astro);
+
+if (!user || !profile) {
+  return Astro.redirect(`/auth/login/?next=${encodeURIComponent(Astro.url.pathname)}`, 302);
+}
 
 let trips: TripCardTrip[] = [];
 let loadError: string | null = null;
 
 try {
-  const supabase = createSupabaseServerClient(Astro);
   const { data, error } = await supabase
     .from("trips")
     .select("id, slug, title, summary, destination_name, visited_at, province, city, status")
@@ -23,13 +28,13 @@ try {
     trips = data ?? [];
   }
 } catch {
-  loadError = "Supabase 尚未配置，暂时无法加载公开游记。";
+  loadError = "数据源尚未配置，暂时无法加载游记。";
 }
 ---
 
 <BaseLayout title="全部游记 - 旅行共写小站" description="按发布时间浏览已经发布的旅行游记。">
   <section class="section">
-    <p class="eyebrow">公开游记</p>
+    <p class="eyebrow">成员游记</p>
     <h1>最近发布的旅程</h1>
     <p class="lead">按发布时间倒序整理已经发布的游记，方便从最新的故事开始读起。</p>
   </section>

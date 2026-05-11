@@ -1,15 +1,29 @@
 ---
 import "../styles/global.css";
+import { getSessionProfile } from "../lib/auth";
+import { isAdmin } from "../lib/roles";
 
 interface Props {
   title: string;
   description?: string;
+  variant?: "default" | "auth";
 }
 
 const {
   title,
   description = "朋友一起记录旅行、照片和足迹的共写小站。",
+  variant = "default",
 } = Astro.props;
+
+const isAuthPage = variant === "auth";
+let profile = null;
+
+try {
+  const session = await getSessionProfile(Astro);
+  profile = session.profile;
+} catch {
+  profile = null;
+}
 ---
 
 <!doctype html>
@@ -20,25 +34,44 @@ const {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
   </head>
-  <body>
-    <div class="site-shell">
-      <header class="site-header">
-        <a class="brand" href="/">旅行共写小站</a>
-        <nav class="nav" aria-label="主导航">
-          <a href="/">首页</a>
-          <a href="/trips/">游记</a>
-          <a href="/footprints/">足迹图</a>
-          <a href="/dashboard/">Dashboard</a>
-        </nav>
-      </header>
+  <body class:list={[isAuthPage && "auth-page-body"]}>
+    {
+      isAuthPage ? (
+        <main>
+          <slot />
+        </main>
+      ) : (
+        <div class="site-shell">
+          <header class="site-header">
+            <a class="brand" href="/">旅行共写小站</a>
+            <nav class="nav" aria-label="主导航">
+              {profile ? (
+                <>
+                  <a href="/">首页</a>
+                  <a href="/trips/">游记</a>
+                  <a href="/footprints/">足迹图</a>
+                  <a href="/dashboard/">我的空间</a>
+                  {isAdmin(profile.role) && <a href="/admin/">管理</a>}
+                  <a href="/auth/logout/">退出</a>
+                </>
+              ) : (
+                <>
+                  <a href="/auth/login/">登录</a>
+                  <a href="/auth/register/">注册</a>
+                </>
+              )}
+            </nav>
+          </header>
 
-      <main>
-        <slot />
-      </main>
+          <main>
+            <slot />
+          </main>
 
-      <footer class="site-footer">
-        和朋友一起记录路线、照片、城市与再次回看的旅程。
-      </footer>
-    </div>
+          <footer class="site-footer">
+            和朋友一起记录路线、照片、城市与再次回看的旅程。
+          </footer>
+        </div>
+      )
+    }
   </body>
 </html>

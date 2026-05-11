@@ -1,6 +1,6 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { createSupabaseServerClient } from "../../lib/supabase/server";
+import { getSessionProfile } from "../../lib/auth";
 
 export const prerender = false;
 
@@ -30,7 +30,13 @@ type DisplayAsset = TripAsset & {
 const slug = Astro.params.slug;
 
 if (!slug) {
-  return new Response("Not found", { status: 404 });
+  return new Response("没有找到这篇游记。", { status: 404 });
+}
+
+const { supabase, user, profile } = await getSessionProfile(Astro);
+
+if (!user || !profile) {
+  return Astro.redirect(`/auth/login/?next=${encodeURIComponent(Astro.url.pathname)}`, 302);
 }
 
 let trip: Trip | null = null;
@@ -38,7 +44,6 @@ let assets: DisplayAsset[] = [];
 let loadError: string | null = null;
 
 try {
-  const supabase = createSupabaseServerClient(Astro);
   const { data, error } = await supabase
     .from("trips")
     .select(
@@ -49,7 +54,7 @@ try {
     .single();
 
   if (error?.code === "PGRST116" || (!data && !error)) {
-    return new Response("Not found", { status: 404 });
+    return new Response("没有找到这篇游记。", { status: 404 });
   }
 
   if (error) {
@@ -84,13 +89,13 @@ try {
     assets = signedAssets.filter((asset) => asset.signedUrl);
   }
 } catch {
-  return new Response("Supabase 尚未配置，暂时无法加载这篇游记。", {
+  return new Response("数据源尚未配置，暂时无法加载这篇游记。", {
     status: 503,
   });
 }
 
 if (!trip && !loadError) {
-  return new Response("Not found", { status: 404 });
+  return new Response("没有找到这篇游记。", { status: 404 });
 }
 
 const formatDate = new Intl.DateTimeFormat("zh-CN", {
@@ -110,7 +115,7 @@ const displayDate =
 
 <BaseLayout
   title={`${trip?.title ?? "游记暂不可用"} - 旅行共写小站`}
-  description={trip?.summary ?? "公开游记详情"}
+  description={trip?.summary ?? "成员游记详情"}
 >
   {
     trip ? (

@@ -1,52 +1,81 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getSessionProfile } from "../../lib/auth";
 
 export const prerender = false;
+
+const { user, profile } = await getSessionProfile(Astro);
+
+if (user && profile) {
+  return Astro.redirect("/dashboard/", 302);
+}
 ---
 
-<BaseLayout title="注册 - 旅行共写小站">
-  <section class="section">
-    <h1>注册</h1>
-    <p class="lead">用用户名、密码和邀请码加入小站，和朋友一起记录旅程。</p>
+<BaseLayout
+  title="注册 - 旅行共写小站"
+  description="用邀请码注册旅行共写小站账号。"
+  variant="auth"
+>
+  <section class="auth-shell">
+    <div class="auth-visual" aria-hidden="true">
+      <img src="/images/login-travel-bg.svg" alt="" />
+    </div>
 
-    <form id="register-form" class="form-grid" novalidate>
-      <div class="field">
-        <label for="username">用户名</label>
-        <input
-          id="username"
-          name="username"
-          autocomplete="username"
-          minlength="3"
-          maxlength="24"
-          pattern="[a-z0-9_]{3,24}"
-          required
-        />
-      </div>
+    <div class="auth-card">
+      <a class="auth-brand" href="/auth/login/">旅行共写小站</a>
+      <p class="eyebrow">邀请加入</p>
+      <h1>拿到邀请码，就可以开始写旅行。</h1>
+      <p class="lead">
+        注册后可以发布自己的游记，也能查看朋友们已经点亮的城市足迹。
+      </p>
 
-      <div class="field">
-        <label for="password">密码</label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autocomplete="new-password"
-          minlength="6"
-          required
-        />
-      </div>
+      <form id="register-form" class="auth-form" novalidate>
+        <div class="field">
+          <label for="username">用户名</label>
+          <input
+            id="username"
+            name="username"
+            autocomplete="username"
+            minlength="3"
+            maxlength="24"
+            pattern="[a-z0-9_]{3,24}"
+            placeholder="3-24 位小写字母、数字或下划线"
+            required
+          />
+        </div>
 
-      <div class="field">
-        <label for="invite-code">邀请码</label>
-        <input id="invite-code" name="inviteCode" autocomplete="off" required />
-      </div>
+        <div class="field">
+          <label for="password">密码</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autocomplete="new-password"
+            minlength="6"
+            placeholder="至少 6 位"
+            required
+          />
+        </div>
 
-      <div class="button-row">
-        <button class="button" type="submit">注册</button>
-        <a class="button secondary" href="/auth/login/">已有账号，去登录</a>
-      </div>
+        <div class="field">
+          <label for="invite-code">邀请码</label>
+          <input
+            id="invite-code"
+            name="inviteCode"
+            autocomplete="off"
+            placeholder="向管理员获取"
+            required
+          />
+        </div>
 
-      <p id="register-message" class="meta" role="status" aria-live="polite"></p>
-    </form>
+        <div class="button-row">
+          <button class="button" type="submit">注册并进入</button>
+          <a class="button secondary" href="/auth/login/">返回登录</a>
+        </div>
+
+        <p id="register-message" class="meta auth-message" role="status" aria-live="polite"></p>
+      </form>
+    </div>
   </section>
 </BaseLayout>
 
@@ -179,7 +208,7 @@ export const prerender = false;
 
       if (!activeSession) {
         showMessage(
-          "当前 Supabase 仍开启了邮箱确认，用户名注册无法立即完成。请先在 Supabase Authentication > Providers > Email 关闭 Confirm email，再重新注册。",
+          "当前后台仍开启了邮箱确认，用户名注册无法立即完成。请先关闭邮箱确认后再重新注册。",
         );
         return;
       }

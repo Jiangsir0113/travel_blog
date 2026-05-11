@@ -1,15 +1,20 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import TripCard, { type TripCardTrip } from "../components/trips/TripCard.astro";
-import { createSupabaseServerClient } from "../lib/supabase/server";
+import { getSessionProfile } from "../lib/auth";
 
 export const prerender = false;
+
+const { supabase, user, profile } = await getSessionProfile(Astro);
+
+if (!user || !profile) {
+  return Astro.redirect(`/auth/login/?next=${encodeURIComponent(Astro.url.pathname)}`, 302);
+}
 
 let recentTrips: TripCardTrip[] = [];
 let loadError: string | null = null;
 
 try {
-  const supabase = createSupabaseServerClient(Astro);
   const { data, error } = await supabase
     .from("trips")
     .select("id, slug, title, summary, destination_name, visited_at, province, city, status")
@@ -23,7 +28,7 @@ try {
     recentTrips = data ?? [];
   }
 } catch {
-  loadError = "Supabase 尚未配置，暂时无法加载最新游记。";
+  loadError = "数据源尚未配置，暂时无法加载最新游记。";
 }
 ---
 
@@ -36,7 +41,7 @@ try {
       <p class="eyebrow">旅行共写小站</p>
       <h1>把朋友们走过的地方，写成可以一起回看的故事。</h1>
       <p class="lead">
-        从公开游记开始阅读，也可以进入足迹图，把城市、路线、照片和同行人的片段连成更完整的旅行记忆。
+        从成员游记开始阅读，也可以进入足迹图，把城市、路线、照片和同行人的片段连成更完整的旅行记忆。
       </p>
       <div class="button-row">
         <a class="button" href="/trips/">浏览游记</a>
@@ -69,7 +74,7 @@ try {
     <div class="grid">
       <article class="card">
         <p class="meta">游记列表</p>
-        <h3><a href="/trips/">阅读全部公开游记</a></h3>
+        <h3><a href="/trips/">阅读全部成员游记</a></h3>
         <p>按发布时间倒序查看已经发布的旅行故事。</p>
       </article>
       <article class="card">

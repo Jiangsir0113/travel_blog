@@ -1,38 +1,66 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getSessionProfile } from "../../lib/auth";
 
 export const prerender = false;
+
+const { user, profile } = await getSessionProfile(Astro);
+
+if (user && profile) {
+  return Astro.redirect("/dashboard/", 302);
+}
 ---
 
-<BaseLayout title="登录 - 旅行共写小站">
-  <section class="section">
-    <h1>登录</h1>
-    <p class="lead">回到你的旅行记录工作台。</p>
+<BaseLayout
+  title="登录 - 旅行共写小站"
+  description="登录旅行共写小站后查看游记、足迹图和个人空间。"
+  variant="auth"
+>
+  <section class="auth-shell">
+    <div class="auth-visual" aria-hidden="true">
+      <img src="/images/login-travel-bg.svg" alt="" />
+    </div>
 
-    <form id="login-form" class="form-grid" novalidate>
-      <div class="field">
-        <label for="login-id">用户名</label>
-        <input id="login-id" name="loginId" autocomplete="username" required />
-      </div>
+    <div class="auth-card">
+      <a class="auth-brand" href="/auth/login/">旅行共写小站</a>
+      <p class="eyebrow">朋友入口</p>
+      <h1>先登录，再一起翻开旅程。</h1>
+      <p class="lead">
+        游记、照片和足迹图只对小站成员开放。用你的用户名和密码进入个人空间。
+      </p>
 
-      <div class="field">
-        <label for="password">密码</label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autocomplete="current-password"
-          required
-        />
-      </div>
+      <form id="login-form" class="auth-form" novalidate>
+        <div class="field">
+          <label for="login-id">用户名</label>
+          <input
+            id="login-id"
+            name="loginId"
+            autocomplete="username"
+            placeholder="例如 yanshuo"
+            required
+          />
+        </div>
 
-      <div class="button-row">
-        <button class="button" type="submit">登录</button>
-        <a class="button secondary" href="/auth/register/">还没有账号，去注册</a>
-      </div>
+        <div class="field">
+          <label for="password">密码</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            placeholder="输入密码"
+            required
+          />
+        </div>
 
-      <p id="login-message" class="meta" role="status" aria-live="polite"></p>
-    </form>
+        <div class="button-row">
+          <button class="button" type="submit">登录小站</button>
+          <a class="button secondary" href="/auth/register/">注册账号</a>
+        </div>
+
+        <p id="login-message" class="meta auth-message" role="status" aria-live="polite"></p>
+      </form>
+    </div>
   </section>
 </BaseLayout>
 

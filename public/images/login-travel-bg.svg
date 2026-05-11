@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" role="img" aria-label="旅行路线、山脉与城市灯光组成的登录背景">
+  <defs>
+    <linearGradient id="sky" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#f7dfb5"/>
+      <stop offset="0.42" stop-color="#fff7e9"/>
+      <stop offset="1" stop-color="#d7e8dd"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#2f6f7b" stop-opacity="0.14"/>
+      <stop offset="0.55" stop-color="#2f6f7b" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#c85f45" stop-opacity="0.22"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#20302c" flood-opacity="0.16"/>
+    </filter>
+    <pattern id="grain" width="80" height="80" patternUnits="userSpaceOnUse">
+      <path d="M18 19h1M55 11h1M72 48h1M29 63h1M6 72h1M47 34h1" stroke="#20302c" stroke-opacity="0.08"/>
+    </pattern>
+  </defs>
+
+  <rect width="1600" height="1000" fill="url(#sky)"/>
+  <rect width="1600" height="1000" fill="url(#grain)" opacity="0.72"/>
+
+  <circle cx="1180" cy="190" r="92" fill="#d7a65f" opacity="0.84"/>
+  <circle cx="1180" cy="190" r="138" fill="#d7a65f" opacity="0.14"/>
+
+  <path d="M0 650C165 572 250 604 398 525c144-77 242-221 395-183 109 27 159 146 277 153 137 8 203-138 336-92 71 25 127 92 194 113v484H0Z" fill="#274c43" opacity="0.92"/>
+  <path d="M0 726c129-54 214-31 334-103 139-83 198-188 322-156 112 29 153 133 274 132 130-2 187-103 293-75 102 27 160 119 377 134v342H0Z" fill="#2f6f7b" opacity="0.72"/>
+  <path d="M0 808c174-31 275-9 407-58 125-46 192-122 308-102 97 16 143 80 256 74 150-8 228-91 353-55 74 22 144 74 276 86v247H0Z" fill="#fffaf2" opacity="0.92"/>
+
+  <path d="M166 842c142-136 259-195 351-177 129 25 143 198 284 224 161 30 257-170 430-126 78 20 144 72 197 123" fill="none" stroke="#c85f45" stroke-width="10" stroke-linecap="round" stroke-dasharray="2 28"/>
+  <path d="M166 842c142-136 259-195 351-177 129 25 143 198 284 224 161 30 257-170 430-126 78 20 144 72 197 123" fill="none" stroke="#274c43" stroke-width="3" stroke-linecap="round" opacity="0.82"/>
+
+  <g filter="url(#softShadow)">
+    <path d="M221 176h446c25 0 45 20 45 45v306c0 25-20 45-45 45H221c-25 0-45-20-45-45V221c0-25 20-45 45-45Z" fill="#fffaf2" opacity="0.9"/>
+    <path d="M236 216h416v52H236z" fill="#d7e8dd"/>
+    <path d="M238 322c74-52 146-64 216-37 81 32 142 11 198-35" fill="none" stroke="#2f6f7b" stroke-width="10" stroke-linecap="round" opacity="0.62"/>
+    <path d="M268 430h326M268 476h243" stroke="#20302c" stroke-opacity="0.22" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="308" cy="355" r="16" fill="#c85f45"/>
+    <circle cx="520" cy="300" r="12" fill="#274c43"/>
+    <circle cx="617" cy="382" r="14" fill="#d7a65f"/>
+  </g>
+
+  <g opacity="0.86">
+    <rect x="1128" y="576" width="28" height="88" rx="5" fill="#274c43"/>
+    <rect x="1166" y="534" width="34" height="130" rx="6" fill="#2f6f7b"/>
+    <rect x="1212" y="598" width="26" height="66" rx="5" fill="#c85f45"/>
+    <rect x="1250" y="558" width="38" height="106" rx="6" fill="#274c43"/>
+    <path d="M1108 681h210" stroke="#20302c" stroke-opacity="0.26" stroke-width="8" stroke-linecap="round"/>
+  </g>
+
+  <path d="M0 705c237-83 390-82 552-34 164 48 261 123 468 92 187-28 330-107 580-61" fill="url(#water)" opacity="0.72"/>
+</svg>

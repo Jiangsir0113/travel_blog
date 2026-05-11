@@ -50,5 +50,5 @@ export async function getSessionProfile(context: AuthContext) {
 export function redirectToLogin(request: Request) {
   const url = new URL(request.url);
 
-  return `/auth/login?next=${encodeURIComponent(url.pathname)}`;
+  return `/auth/login/?next=${encodeURIComponent(url.pathname)}`;
 }

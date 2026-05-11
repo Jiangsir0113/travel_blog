@@ -39,14 +39,14 @@ const { data: invites, error: loadError } = await supabase
   .order("created_at", { ascending: false });
 ---
 
-<DashboardLayout title="邀请码管理 - Dashboard">
+<DashboardLayout title="邀请码管理 - 旅行共写小站">
   <section class="section">
-    <p class="eyebrow">Admin</p>
+    <p class="eyebrow">管理</p>
     <h1>邀请码管理</h1>
     <p class="lead">新邀请码默认授予作者权限，最多可使用 10 次。</p>
     <form method="post" class="button-row">
       <button class="button" type="submit">生成新邀请码</button>
-      <a class="button secondary" href="/admin/">返回后台</a>
+      <a class="button secondary" href="/admin/">返回管理后台</a>
     </form>
     {message && <p class="meta" role="status">{message}</p>}
     {error && <p class="meta" role="alert">{error}</p>}
@@ -61,7 +61,7 @@ const { data: invites, error: loadError } = await supabase
           <table class="admin-table">
             <thead>
               <tr>
-                <th scope="col">Code</th>
+                <th scope="col">邀请码</th>
                 <th scope="col">已使用</th>
                 <th scope="col">上限</th>
                 <th scope="col">启用</th>

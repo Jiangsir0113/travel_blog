@@ -7,6 +7,11 @@ export const prerender = false;
 
 const allowedRoles = new Set<UserRole>(["admin", "author", "reader"]);
 const mapColorPattern = /^#[0-9A-Fa-f]{6}$/;
+const roleLabels: Record<UserRole, string> = {
+  admin: "管理员",
+  author: "作者",
+  reader: "读者",
+};
 
 const { supabase, user, profile } = await getSessionProfile(Astro);
 if (!user) {
@@ -29,7 +34,7 @@ if (Astro.request.method === "POST") {
   if (!id) {
     error = "缺少用户 ID。";
   } else if (!allowedRoles.has(role as UserRole)) {
-    error = "角色只能是 admin、author 或 reader。";
+    error = "角色只能是管理员、作者或读者。";
   } else if (!mapColorPattern.test(mapColor)) {
     error = "地图颜色必须是 #RRGGBB 格式。";
   } else {
@@ -52,13 +57,13 @@ const { data: users, error: loadError } = await supabase
   .order("created_at", { ascending: false });
 ---
 
-<DashboardLayout title="用户管理 - Dashboard">
+<DashboardLayout title="用户管理 - 旅行共写小站">
   <section class="section">
-    <p class="eyebrow">Admin</p>
+    <p class="eyebrow">管理</p>
     <h1>用户管理</h1>
     <p class="lead">调整用户角色和足迹地图颜色。</p>
     <div class="button-row">
-      <a class="button secondary" href="/admin/">返回后台</a>
+      <a class="button secondary" href="/admin/">返回管理后台</a>
     </div>
     {message && <p class="meta" role="status">{message}</p>}
     {error && <p class="meta" role="alert">{error}</p>}
@@ -93,13 +98,13 @@ const { data: users, error: loadError } = await supabase
                       </label>
                       <select id={`role-${managedUser.id}`} name="role">
                         <option value="admin" selected={managedUser.role === "admin"}>
-                          admin
+                          {roleLabels.admin}
                         </option>
                         <option value="author" selected={managedUser.role === "author"}>
-                          author
+                          {roleLabels.author}
                         </option>
                         <option value="reader" selected={managedUser.role === "reader"}>
-                          reader
+                          {roleLabels.reader}
                         </option>
                       </select>
                     </form>

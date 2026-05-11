@@ -2,15 +2,20 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import FootprintMap from "../components/maps/FootprintMap.astro";
 import { aggregatePublishedTripsByCity, type CityFootprint, type MapTripInput } from "../lib/map-data";
-import { createSupabaseServerClient } from "../lib/supabase/server";
+import { getSessionProfile } from "../lib/auth";
 
 export const prerender = false;
+
+const { supabase, user, profile } = await getSessionProfile(Astro);
+
+if (!user || !profile) {
+  return Astro.redirect(`/auth/login/?next=${encodeURIComponent(Astro.url.pathname)}`, 302);
+}
 
 let footprints: CityFootprint[] = [];
 let loadError: string | null = null;
 
 try {
-  const supabase = createSupabaseServerClient(Astro);
   const { data, error } = await supabase
     .from("trips")
     .select(
@@ -33,9 +38,9 @@ try {
   <section class="section">
     <p class="eyebrow">足迹图</p>
     <h1>朋友们走过的中国城市</h1>
-    <p class="lead">把已发布游记按城市聚合到地图上，用作者颜色留下每个人的旅行足迹。</p>
+    <p class="lead">把成员游记按省市聚合到地图上，点亮大家一起走过的地方。</p>
     <div class="button-row">
-      <a class="button" href="/trips/">查看公开游记</a>
+      <a class="button" href="/trips/">查看游记</a>
       <a class="button secondary" href="/">返回首页</a>
     </div>
   </section>
@@ -47,7 +52,7 @@ try {
       !loadError && footprints.length > 0 ? (
         <FootprintMap footprints={footprints} />
       ) : (
-        !loadError && <p class="meta">还没有可展示的公开足迹。</p>
+        !loadError && <p class="meta">还没有可展示的足迹。</p>
       )
     }
   </section>
