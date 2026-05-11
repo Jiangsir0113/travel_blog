@@ -11,6 +11,7 @@ type ProfileRole = "admin" | "author" | "reader";
 
 interface Profile {
   id: string;
+  username: string;
   display_name: string;
   avatar_url: string | null;
   role: ProfileRole;

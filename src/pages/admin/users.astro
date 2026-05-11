@@ -48,7 +48,7 @@ if (Astro.request.method === "POST") {
 
 const { data: users, error: loadError } = await supabase
   .from("profiles")
-  .select("id, display_name, role, map_color")
+  .select("id, username, display_name, role, map_color")
   .order("created_at", { ascending: false });
 ---
 
@@ -74,6 +74,7 @@ const { data: users, error: loadError } = await supabase
             <thead>
               <tr>
                 <th scope="col">昵称</th>
+                <th scope="col">用户名</th>
                 <th scope="col">角色</th>
                 <th scope="col">地图颜色</th>
                 <th scope="col">操作</th>
@@ -83,6 +84,7 @@ const { data: users, error: loadError } = await supabase
               {users.map((managedUser) => (
                 <tr>
                   <td>{managedUser.display_name}</td>
+                  <td>{managedUser.username}</td>
                   <td>
                     <form id={`user-${managedUser.id}`} method="post" class="admin-inline-form">
                       <input type="hidden" name="id" value={managedUser.id} />

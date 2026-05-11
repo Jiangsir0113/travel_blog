@@ -11,8 +11,8 @@ export const prerender = false;
 
     <form id="login-form" class="form-grid" novalidate>
       <div class="field">
-        <label for="email">邮箱</label>
-        <input id="email" name="email" type="email" autocomplete="email" required />
+        <label for="login-id">用户名</label>
+        <input id="login-id" name="loginId" autocomplete="username" required />
       </div>
 
       <div class="field">
@@ -38,6 +38,7 @@ export const prerender = false;
 
 <script>
   import { createSupabaseBrowserClient } from "../../lib/supabase/browser";
+  import { identifierToAuthEmail } from "../../lib/username-auth";
 
   const form = document.querySelector<HTMLFormElement>("#login-form");
   const message = document.querySelector<HTMLParagraphElement>("#login-message");
@@ -68,28 +69,48 @@ export const prerender = false;
     }
   }
 
+  async function resolveLoginEmail(
+    supabase: ReturnType<typeof createSupabaseBrowserClient>,
+    loginId: string,
+  ) {
+    if (loginId.includes("@")) {
+      return identifierToAuthEmail(loginId);
+    }
+
+    const { data, error } = await supabase.rpc("resolve_username_auth_email", {
+      login_username: loginId,
+    });
+
+    if (!error && typeof data === "string" && data) {
+      return data;
+    }
+
+    return identifierToAuthEmail(loginId);
+  }
+
   form?.addEventListener("submit", async (event) => {
     event.preventDefault();
     showMessage("正在登录...");
 
     const formData = new FormData(form);
-    const email = String(formData.get("email") ?? "").trim();
+    const loginId = String(formData.get("loginId") ?? "").trim();
     const password = String(formData.get("password") ?? "");
 
-    if (!email || !password) {
-      showMessage("请填写邮箱和密码。");
+    if (!loginId || !password) {
+      showMessage("请填写用户名和密码。");
       return;
     }
 
     try {
       const supabase = createSupabaseBrowserClient();
+      const email = await resolveLoginEmail(supabase, loginId);
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        showMessage("登录失败，请检查邮箱和密码。");
+        showMessage("登录失败，请检查用户名和密码。");
         return;
       }
 

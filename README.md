@@ -48,7 +48,7 @@ coordinates:
 - `PUBLIC_SUPABASE_URL`
 - `PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 
-部署前还需要先执行 Supabase migration，并准备管理员或邀请码账号。
+部署前还需要先执行 Supabase migration，并准备管理员或邀请码账号。站点面向朋友测试时使用用户名和密码登录；Supabase Auth 内部仍使用自动生成的邮箱标识。
 
 详细步骤见 [docs/deploy-cloudflare-pages.md](docs/deploy-cloudflare-pages.md)。
 

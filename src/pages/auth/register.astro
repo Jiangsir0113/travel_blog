@@ -7,17 +7,20 @@ export const prerender = false;
 <BaseLayout title="注册 - 旅行共写小站">
   <section class="section">
     <h1>注册</h1>
-    <p class="lead">使用邀请码加入小站，和朋友一起记录旅程。</p>
+    <p class="lead">用用户名、密码和邀请码加入小站，和朋友一起记录旅程。</p>
 
     <form id="register-form" class="form-grid" novalidate>
       <div class="field">
-        <label for="display-name">昵称</label>
-        <input id="display-name" name="displayName" autocomplete="name" required />
-      </div>
-
-      <div class="field">
-        <label for="email">邮箱</label>
-        <input id="email" name="email" type="email" autocomplete="email" required />
+        <label for="username">用户名</label>
+        <input
+          id="username"
+          name="username"
+          autocomplete="username"
+          minlength="3"
+          maxlength="24"
+          pattern="[a-z0-9_]{3,24}"
+          required
+        />
       </div>
 
       <div class="field">
@@ -49,6 +52,12 @@ export const prerender = false;
 
 <script>
   import { createSupabaseBrowserClient } from "../../lib/supabase/browser";
+  import {
+    getUsernameHelpText,
+    isValidUsername,
+    normalizeUsername,
+    usernameToAuthEmail,
+  } from "../../lib/username-auth";
 
   const form = document.querySelector<HTMLFormElement>("#register-form");
   const message = document.querySelector<HTMLParagraphElement>("#register-message");
@@ -69,7 +78,15 @@ export const prerender = false;
     }
 
     if (errorMessage.includes("DISPLAY_NAME_INVALID")) {
-      return "昵称需要填写，且不能超过 60 个字符。";
+      return "用户名需要填写，且不能超过 60 个字符。";
+    }
+
+    if (errorMessage.includes("USERNAME_INVALID")) {
+      return getUsernameHelpText();
+    }
+
+    if (errorMessage.includes("USERNAME_ALREADY_EXISTS")) {
+      return "这个用户名已经被使用，请换一个。";
     }
 
     if (errorMessage.includes("AUTH_REQUIRED")) {
@@ -80,14 +97,14 @@ export const prerender = false;
       errorMessage.toLowerCase().includes("already registered") ||
       errorMessage.toLowerCase().includes("already exists")
     ) {
-      return "这个邮箱可能已经注册，请直接登录或换一个邮箱。";
+      return "这个用户名可能已经注册，请直接登录或换一个用户名。";
     }
 
     if (
       errorMessage.toLowerCase().includes("rate limit") ||
       errorMessage.includes("429")
     ) {
-      return "注册邮件发送太频繁，请稍后再试，或换一个邮箱。";
+      return "注册太频繁，请稍后再试。";
     }
 
     if (
@@ -95,10 +112,10 @@ export const prerender = false;
       errorMessage.toLowerCase().includes("email address") ||
       errorMessage.toLowerCase().includes("invalid")
     ) {
-      return "邮箱地址未通过 Supabase 校验，请换一个真实可收信邮箱。";
+      return "用户名未通过校验，请使用 3-24 位小写字母、数字或下划线。";
     }
 
-    return "注册失败，请检查邮箱、密码和邀请码后再试。";
+    return "注册失败，请检查用户名、密码和邀请码后再试。";
   }
 
   form?.addEventListener("submit", async (event) => {
@@ -106,13 +123,18 @@ export const prerender = false;
     showMessage("正在注册...");
 
     const formData = new FormData(form);
-    const displayName = String(formData.get("displayName") ?? "").trim();
-    const email = String(formData.get("email") ?? "").trim();
+    const username = normalizeUsername(String(formData.get("username") ?? ""));
     const password = String(formData.get("password") ?? "");
     const inviteCode = String(formData.get("inviteCode") ?? "").trim();
+    const authEmail = usernameToAuthEmail(username);
 
-    if (!displayName || !email || !password || !inviteCode) {
-      showMessage("请填写昵称、邮箱、密码和邀请码。");
+    if (!username || !password || !inviteCode) {
+      showMessage("请填写用户名、密码和邀请码。");
+      return;
+    }
+
+    if (!isValidUsername(username)) {
+      showMessage(getUsernameHelpText());
       return;
     }
 
@@ -122,7 +144,7 @@ export const prerender = false;
         data: { session: currentSession },
       } = await supabase.auth.getSession();
       let activeSession =
-        currentSession?.user.email?.toLowerCase() === email.toLowerCase()
+        currentSession?.user.email?.toLowerCase() === authEmail
           ? currentSession
           : null;
 
@@ -137,8 +159,14 @@ export const prerender = false;
 
       if (!activeSession) {
         const { data, error: signUpError } = await supabase.auth.signUp({
-          email,
+          email: authEmail,
           password,
+          options: {
+            data: {
+              username,
+              display_name: username,
+            },
+          },
         });
 
         if (signUpError) {
@@ -151,7 +179,7 @@ export const prerender = false;
 
       if (!activeSession) {
         showMessage(
-          "注册邮件已发送。当前环境需要先确认邮箱，暂时无法立即创建个人资料；请确认邮箱后登录，再联系管理员补发邀请码或完成资料创建。",
+          "当前 Supabase 仍开启了邮箱确认，用户名注册无法立即完成。请先在 Supabase Authentication > Providers > Email 关闭 Confirm email，再重新注册。",
         );
         return;
       }
@@ -160,7 +188,8 @@ export const prerender = false;
         "create_profile_with_invite",
         {
           invite_code: inviteCode,
-          display_name: displayName,
+          username,
+          display_name: username,
           avatar_url: null,
         },
       );

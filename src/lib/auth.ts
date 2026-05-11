@@ -8,6 +8,7 @@ type AuthContext = Pick<APIContext, "request" | "cookies">;
 
 export type SessionProfile = {
   id: string;
+  username: string;
   display_name: string;
   avatar_url: string | null;
   role: UserRole;
@@ -31,7 +32,7 @@ export async function getSessionProfile(context: AuthContext) {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, role, map_color")
+    .select("id, username, display_name, avatar_url, role, map_color")
     .eq("id", user.id)
     .single<SessionProfile>();
 
