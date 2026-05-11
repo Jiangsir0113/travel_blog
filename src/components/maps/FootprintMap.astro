@@ -7,74 +7,45 @@ interface Props {
 
 const { footprints } = Astro.props;
 
-function projectPoint({ x, y }: Pick<CityFootprint, "x" | "y">) {
-  return {
-    x: (x / 100) * 720,
-    y: (y / 100) * 520,
-  };
-}
-
 function markerRadius(tripCount: number) {
   return Math.min(17, 8 + tripCount * 2);
 }
 ---
 
 <div class="footprint-map" aria-labelledby="footprint-map-title">
+  <h3 id="footprint-map-title" class="sr-only">中国城市足迹图</h3>
+  <p id="footprint-map-desc" class="sr-only">地图上标记已发布游记覆盖的城市，并用作者颜色区分足迹。</p>
+
   <div class="footprint-canvas">
-    <svg
-      class="china-map"
-      viewBox="0 0 720 520"
+    <div
+      class="china-map-stage"
       role="img"
       aria-labelledby="footprint-map-title footprint-map-desc"
     >
-      <title id="footprint-map-title">中国城市足迹图</title>
-      <desc id="footprint-map-desc">地图上标记已发布游记覆盖的城市，并用作者颜色区分足迹。</desc>
-      <path
-        class="china-outline"
-        d="M145 104 L246 72 L348 90 L457 70 L559 112 L620 189 L590 260 L640 327 L559 400 L433 423 L337 470 L254 423 L163 388 L105 307 L78 214 Z"
-      />
-      <path
-        class="china-river"
-        d="M176 287 C244 255 284 306 351 278 C420 249 456 296 539 260"
-      />
-      {
-        footprints.map((footprint) => {
-          const point = projectPoint(footprint);
-          const radius = markerRadius(footprint.trips.length);
-          const color = footprint.authorColors[0] ?? "#2f6f7b";
-          const firstTrip = footprint.trips[0];
+      <img class="china-map-image" src="/maps/china-map.jpg" alt="" loading="lazy" />
+      <div class="map-marker-layer">
+        {
+          footprints.map((footprint) => {
+            const radius = markerRadius(footprint.trips.length);
+            const color = footprint.authorColors[0] ?? "#2f6f7b";
+            const firstTrip = footprint.trips[0];
 
-          return (
-            <a
-              href={firstTrip ? `/trips/${firstTrip.slug}/` : "#"}
-              class="map-marker"
-              aria-label={`${footprint.city}，${footprint.trips.length} 篇游记`}
-            >
-              <g>
-                <circle
-                  cx={point.x}
-                  cy={point.y}
-                  r={radius + 5}
-                  class="map-marker-halo"
-                />
-                <circle
-                  cx={point.x}
-                  cy={point.y}
-                  r={radius}
-                  fill={color}
-                  class="map-marker-dot"
-                >
-                  <title>{`${footprint.city}，${footprint.trips.length} 篇游记`}</title>
-                </circle>
-                <text x={point.x + radius + 8} y={point.y + 5}>
-                  {footprint.city}
-                </text>
-              </g>
-            </a>
-          );
-        })
-      }
-    </svg>
+            return (
+              <a
+                href={firstTrip ? `/trips/${firstTrip.slug}/` : "#"}
+                class="map-marker"
+                aria-label={`${footprint.city}，${footprint.trips.length} 篇游记`}
+                style={`--marker-x: ${footprint.x}%; --marker-y: ${footprint.y}%; --marker-color: ${color}; --marker-size: ${radius * 2}px;`}
+              >
+                <span class="map-marker-halo" aria-hidden="true"></span>
+                <span class="map-marker-dot" aria-hidden="true"></span>
+                <span class="map-marker-label">{footprint.city}</span>
+              </a>
+            );
+          })
+        }
+      </div>
+    </div>
   </div>
 
   <div class="footprint-city-grid" aria-label="城市游记列表">

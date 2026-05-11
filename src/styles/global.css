@@ -433,61 +433,84 @@ h3 {
 }
 
 .footprint-canvas {
-  overflow: hidden;
+  overflow-x: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--water), transparent 90%), transparent 36%),
-    color-mix(in srgb, white, var(--paper) 26%);
+  background: white;
 }
 
-.china-map {
-  display: block;
+.china-map-stage {
+  position: relative;
+  min-width: 680px;
+}
+
+.china-map-image {
   width: 100%;
-  min-height: 320px;
+  height: auto;
 }
 
-.china-outline {
-  fill: color-mix(in srgb, var(--forest), transparent 86%);
-  stroke: var(--forest);
-  stroke-linejoin: round;
-  stroke-width: 3;
-}
-
-.china-river {
-  fill: none;
-  stroke: color-mix(in srgb, var(--water), transparent 35%);
-  stroke-linecap: round;
-  stroke-width: 5;
-}
-
-.map-marker-halo {
-  fill: color-mix(in srgb, white, transparent 20%);
-  stroke: color-mix(in srgb, var(--forest), transparent 40%);
-  stroke-width: 1;
-}
-
-.map-marker-dot {
-  stroke: white;
-  stroke-width: 3;
-}
-
-.map-marker text {
-  fill: var(--ink);
-  font-size: 15px;
-  font-weight: 800;
-  paint-order: stroke;
-  stroke: color-mix(in srgb, white, transparent 12%);
-  stroke-width: 5;
+.map-marker-layer {
+  position: absolute;
+  inset: 0;
 }
 
 .map-marker {
+  position: absolute;
+  left: var(--marker-x);
+  top: var(--marker-y);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transform: translateY(-50%);
+  color: var(--ink);
+  font-size: clamp(0.78rem, 1.8vw, 0.95rem);
+  font-weight: 900;
   text-decoration: none;
+  text-shadow:
+    0 1px 0 white,
+    1px 0 0 white,
+    0 -1px 0 white,
+    -1px 0 0 white;
+  z-index: 1;
+}
+
+.map-marker-halo,
+.map-marker-dot {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+}
+
+.map-marker-halo {
+  width: calc(var(--marker-size) + 12px);
+  height: calc(var(--marker-size) + 12px);
+  border: 2px solid color-mix(in srgb, var(--forest), transparent 32%);
+  background: color-mix(in srgb, white, transparent 8%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, white, transparent 30%);
+}
+
+.map-marker-dot {
+  width: var(--marker-size);
+  height: var(--marker-size);
+  border: 3px solid white;
+  background: var(--marker-color, var(--clay));
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--ink), transparent 70%);
+}
+
+.map-marker-label {
+  position: relative;
+  min-width: max-content;
+  margin-left: calc(var(--marker-size) / 2 + 8px);
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, white, transparent 16%);
 }
 
 .map-marker:hover .map-marker-dot,
 .map-marker:focus-visible .map-marker-dot {
-  stroke: var(--sun);
+  border-color: var(--sun);
 }
 
 .footprint-city-grid {

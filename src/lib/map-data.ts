@@ -1,4 +1,8 @@
-import { chinaMapCenter, cityCoordinates } from "../data/china-city-coordinates";
+import {
+  chinaMapCenter,
+  cityCoordinates,
+  projectChinaGeoPoint,
+} from "../data/china-city-coordinates";
 
 export type MapTripStatus = "draft" | "published";
 
@@ -51,13 +55,6 @@ const fallbackAuthor = {
 };
 
 const hexColorPattern = /^#[0-9A-Fa-f]{6}$/;
-const chinaBounds = {
-  minLongitude: 73.5,
-  maxLongitude: 135.1,
-  minLatitude: 18,
-  maxLatitude: 53.6,
-};
-
 export function aggregatePublishedTripsByCity(trips: MapTripInput[]): CityFootprint[] {
   const cityMap = new Map<string, CityFootprint>();
 
@@ -128,25 +125,5 @@ function projectTripCoordinates(trip: Pick<MapTripInput, "latitude" | "longitude
   const latitude = Number(trip.latitude);
   const longitude = Number(trip.longitude);
 
-  if (
-    !Number.isFinite(latitude) ||
-    !Number.isFinite(longitude) ||
-    latitude < chinaBounds.minLatitude ||
-    latitude > chinaBounds.maxLatitude ||
-    longitude < chinaBounds.minLongitude ||
-    longitude > chinaBounds.maxLongitude
-  ) {
-    return null;
-  }
-
-  return {
-    x:
-      ((longitude - chinaBounds.minLongitude) /
-        (chinaBounds.maxLongitude - chinaBounds.minLongitude)) *
-      100,
-    y:
-      ((chinaBounds.maxLatitude - latitude) /
-        (chinaBounds.maxLatitude - chinaBounds.minLatitude)) *
-      100,
-  };
+  return projectChinaGeoPoint({ latitude, longitude });
 }

@@ -92,6 +92,22 @@ describe("aggregatePublishedTripsByCity", () => {
     expect(footprints[0].y).not.toBe(chinaMapCenter.y);
   });
 
+  it("projects trip coordinates onto the uploaded China map image area", () => {
+    const footprints = aggregatePublishedTripsByCity([
+      {
+        ...baseTrip,
+        city: "渭南市",
+        latitude: 34.46333,
+        longitude: 110.08083,
+      },
+    ]);
+
+    expect(footprints[0].x).toBeGreaterThan(50);
+    expect(footprints[0].x).toBeLessThan(55);
+    expect(footprints[0].y).toBeGreaterThan(50);
+    expect(footprints[0].y).toBeLessThan(55);
+  });
+
   it("falls back when author color is malformed", () => {
     const footprints = aggregatePublishedTripsByCity([
       {
