@@ -655,19 +655,19 @@ h3 {
 }
 
 .footprint-density-bar span:nth-child(1) {
-  background: color-mix(in srgb, var(--clay), transparent 82%);
+  background: #f3eee5;
 }
 
 .footprint-density-bar span:nth-child(2) {
-  background: color-mix(in srgb, var(--clay), transparent 68%);
+  background: #f5cfc2;
 }
 
 .footprint-density-bar span:nth-child(3) {
-  background: color-mix(in srgb, var(--clay), transparent 48%);
+  background: #ee9a85;
 }
 
 .footprint-density-bar span:nth-child(4) {
-  background: color-mix(in srgb, var(--clay), transparent 26%);
+  background: #dd725f;
 }
 
 .footprint-density-labels {
@@ -748,7 +748,7 @@ h3 {
   width: var(--region-progress);
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--water), var(--clay));
+  background: linear-gradient(90deg, #f5cfc2, #dd725f);
   content: "";
 }
 
