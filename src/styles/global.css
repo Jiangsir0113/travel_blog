@@ -203,6 +203,24 @@ h3 {
   border-radius: 8px;
 }
 
+.trip-photo {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.trip-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 14px;
+}
+
+.trip-photo-grid .trip-photo {
+  margin: 0;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, white, var(--paper) 28%);
+}
+
 .article-body {
   margin-top: 32px;
   font-size: 1.08rem;
@@ -461,6 +479,15 @@ h3 {
   paint-order: stroke;
   stroke: color-mix(in srgb, white, transparent 12%);
   stroke-width: 5;
+}
+
+.map-marker {
+  text-decoration: none;
+}
+
+.map-marker:hover .map-marker-dot,
+.map-marker:focus-visible .map-marker-dot {
+  stroke: var(--sun);
 }
 
 .footprint-city-grid {

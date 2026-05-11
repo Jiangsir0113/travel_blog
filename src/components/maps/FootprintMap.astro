@@ -42,28 +42,35 @@ function markerRadius(tripCount: number) {
           const point = projectPoint(footprint);
           const radius = markerRadius(footprint.trips.length);
           const color = footprint.authorColors[0] ?? "#2f6f7b";
+          const firstTrip = footprint.trips[0];
 
           return (
-            <g class="map-marker">
-              <circle
-                cx={point.x}
-                cy={point.y}
-                r={radius + 5}
-                class="map-marker-halo"
-              />
-              <circle
-                cx={point.x}
-                cy={point.y}
-                r={radius}
-                fill={color}
-                class="map-marker-dot"
-              >
-                <title>{`${footprint.city}，${footprint.trips.length} 篇游记`}</title>
-              </circle>
-              <text x={point.x + radius + 8} y={point.y + 5}>
-                {footprint.city}
-              </text>
-            </g>
+            <a
+              href={firstTrip ? `/trips/${firstTrip.slug}/` : "#"}
+              class="map-marker"
+              aria-label={`${footprint.city}，${footprint.trips.length} 篇游记`}
+            >
+              <g>
+                <circle
+                  cx={point.x}
+                  cy={point.y}
+                  r={radius + 5}
+                  class="map-marker-halo"
+                />
+                <circle
+                  cx={point.x}
+                  cy={point.y}
+                  r={radius}
+                  fill={color}
+                  class="map-marker-dot"
+                >
+                  <title>{`${footprint.city}，${footprint.trips.length} 篇游记`}</title>
+                </circle>
+                <text x={point.x + radius + 8} y={point.y + 5}>
+                  {footprint.city}
+                </text>
+              </g>
+            </a>
           );
         })
       }

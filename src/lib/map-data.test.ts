@@ -74,6 +74,24 @@ describe("aggregatePublishedTripsByCity", () => {
     });
   });
 
+  it("uses trip coordinates before falling back to the city coordinate table", () => {
+    const footprints = aggregatePublishedTripsByCity([
+      {
+        ...baseTrip,
+        city: "渭南市",
+        latitude: 34.46333,
+        longitude: 110.08083,
+      },
+    ]);
+
+    expect(footprints[0]).toMatchObject({
+      city: "渭南市",
+      isFallbackLocation: false,
+    });
+    expect(footprints[0].x).not.toBe(chinaMapCenter.x);
+    expect(footprints[0].y).not.toBe(chinaMapCenter.y);
+  });
+
   it("falls back when author color is malformed", () => {
     const footprints = aggregatePublishedTripsByCity([
       {

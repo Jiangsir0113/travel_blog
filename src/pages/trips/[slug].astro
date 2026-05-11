@@ -131,9 +131,10 @@ const displayDate =
         {assets.length > 0 && (
           <section class="section" aria-labelledby="trip-photos">
             <h2 id="trip-photos">照片</h2>
-            <div class="grid">
+            <div class="trip-photo-grid">
               {assets.map((asset) => (
                 <img
+                  class="trip-photo"
                   src={asset.signedUrl ?? asset.storage_path}
                   width={asset.width ?? undefined}
                   height={asset.height ?? undefined}

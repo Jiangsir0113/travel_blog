@@ -14,6 +14,8 @@ export type MapTripInput = {
   title: string;
   city: string;
   destination_name: string;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
   status: MapTripStatus | string;
   published_at: string | null;
   visited_at: string;
@@ -49,6 +51,12 @@ const fallbackAuthor = {
 };
 
 const hexColorPattern = /^#[0-9A-Fa-f]{6}$/;
+const chinaBounds = {
+  minLongitude: 73.5,
+  maxLongitude: 135.1,
+  minLatitude: 18,
+  maxLatitude: 53.6,
+};
 
 export function aggregatePublishedTripsByCity(trips: MapTripInput[]): CityFootprint[] {
   const cityMap = new Map<string, CityFootprint>();
@@ -56,7 +64,7 @@ export function aggregatePublishedTripsByCity(trips: MapTripInput[]): CityFootpr
   trips
     .filter((trip) => trip.status === "published")
     .forEach((trip) => {
-      const coordinate = cityCoordinates[trip.city];
+      const coordinate = projectTripCoordinates(trip) ?? cityCoordinates[trip.city];
       const author = normalizeAuthor(trip.profiles);
       const existing =
         cityMap.get(trip.city) ??
@@ -114,4 +122,31 @@ function normalizeAuthor(author: MapTripInput["profiles"]): FootprintTripLink["a
 
 function normalizeMapColor(mapColor: string | null | undefined) {
   return mapColor && hexColorPattern.test(mapColor) ? mapColor : fallbackAuthor.mapColor;
+}
+
+function projectTripCoordinates(trip: Pick<MapTripInput, "latitude" | "longitude">) {
+  const latitude = Number(trip.latitude);
+  const longitude = Number(trip.longitude);
+
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < chinaBounds.minLatitude ||
+    latitude > chinaBounds.maxLatitude ||
+    longitude < chinaBounds.minLongitude ||
+    longitude > chinaBounds.maxLongitude
+  ) {
+    return null;
+  }
+
+  return {
+    x:
+      ((longitude - chinaBounds.minLongitude) /
+        (chinaBounds.maxLongitude - chinaBounds.minLongitude)) *
+      100,
+    y:
+      ((chinaBounds.maxLatitude - latitude) /
+        (chinaBounds.maxLatitude - chinaBounds.minLatitude)) *
+      100,
+  };
 }

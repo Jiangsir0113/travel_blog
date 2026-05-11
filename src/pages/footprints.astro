@@ -14,7 +14,7 @@ try {
   const { data, error } = await supabase
     .from("trips")
     .select(
-      "id, slug, title, city, destination_name, status, published_at, visited_at, profiles:author_id(id, display_name, map_color)",
+      "id, slug, title, city, destination_name, latitude, longitude, status, published_at, visited_at, profiles:author_id(id, display_name, map_color)",
     )
     .eq("status", "published")
     .order("published_at", { ascending: false, nullsFirst: false });
