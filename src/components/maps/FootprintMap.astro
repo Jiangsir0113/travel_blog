@@ -1,158 +1,87 @@
 ---
-import type { CityFootprint } from "../../lib/map-data";
+import {
+  getFootprintTotals,
+  summarizeFootprintsByProvince,
+  type CityFootprint,
+} from "../../lib/map-data";
 
 interface Props {
   footprints: CityFootprint[];
 }
 
 const { footprints } = Astro.props;
-
-function markerRadius(tripCount: number) {
-  return Math.min(7, 4 + tripCount);
-}
+const provinceSummaries = summarizeFootprintsByProvince(footprints);
+const totals = getFootprintTotals(provinceSummaries);
+const payloadJson = JSON.stringify({
+  footprints,
+  provinces: provinceSummaries,
+  totals,
+}).replace(/</g, "\\u003c");
 
 function getProvinceId(province: string) {
   return `province-${encodeURIComponent(province)}`;
 }
-
-const provinceMap = footprints.reduce((provinceMap, footprint) => {
-    const province = footprint.province ?? "未知省份";
-    const existing =
-      provinceMap.get(province) ??
-      {
-        province,
-        x: footprint.provinceX,
-        y: footprint.provinceY,
-        width: footprint.provinceHighlightWidth,
-        height: footprint.provinceHighlightHeight,
-        cityCount: 0,
-        tripCount: 0,
-        colors: [] as string[],
-        cities: [] as CityFootprint[],
-      };
-
-    existing.cityCount += 1;
-    existing.tripCount += footprint.trips.length;
-    existing.cities.push(footprint);
-    footprint.authorColors.forEach((color) => {
-      if (!existing.colors.includes(color)) {
-        existing.colors.push(color);
-      }
-    });
-    provinceMap.set(province, existing);
-    return provinceMap;
-  }, new Map<string, {
-    province: string;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    cityCount: number;
-    tripCount: number;
-    colors: string[];
-    cities: CityFootprint[];
-  }>());
-
-const provinceSummaries = Array.from(provinceMap.values()).sort(
-  (a, b) => b.tripCount - a.tripCount || a.province.localeCompare(b.province, "zh-CN"),
-);
-
-const maxProvinceTripCount = Math.max(
-  1,
-  ...provinceSummaries.map((province) => province.tripCount),
-);
-const visitedCityCount = footprints.length;
-const totalTripCount = footprints.reduce((total, footprint) => total + footprint.trips.length, 0);
 ---
 
 <div class="footprint-map" aria-labelledby="footprint-map-title">
-  <h3 id="footprint-map-title" class="sr-only">中国城市足迹图</h3>
-  <p id="footprint-map-desc" class="sr-only">地图上标记已发布游记覆盖的城市，并用作者颜色区分足迹。</p>
+  <h3 id="footprint-map-title" class="sr-only">中国省市足迹图</h3>
+  <p id="footprint-map-desc" class="sr-only">
+    地图按已发布游记中的省市信息点亮中国省市区域。
+  </p>
 
-  <div class="footprint-overview">
-    <div class="footprint-canvas">
-      <div
-        class="china-map-stage"
-        role="img"
-        aria-labelledby="footprint-map-title footprint-map-desc"
-      >
-        <img class="china-map-image" src="/maps/china-map.jpg" alt="" loading="lazy" />
-        <div class="province-highlight-layer" aria-hidden="true">
-          {
-            provinceSummaries.map((province) => (
-              <span
-                class="province-highlight"
-                style={`--province-x: ${province.x}%; --province-y: ${province.y}%; --province-width: ${province.width}%; --province-height: ${province.height}%; --province-opacity: ${0.18 + (province.tripCount / maxProvinceTripCount) * 0.22};`}
-              ></span>
-            ))
-          }
+  <div class="footprint-geo-layout">
+    <section class="footprint-map-surface" aria-describedby="footprint-map-desc">
+      <div class="footprint-map-toolbar">
+        <div>
+          <p class="meta">GeoJSON.CN 省市边界</p>
+          <h3>中国足迹地图</h3>
         </div>
-        <div class="map-marker-layer">
-          {
-            footprints.map((footprint) => {
-              const radius = markerRadius(footprint.trips.length);
-              const color = footprint.authorColors[0] ?? "#2f6f7b";
-              const firstTrip = footprint.trips[0];
-
-              return (
-                <a
-                  href={firstTrip ? `/trips/${firstTrip.slug}/` : "#"}
-                  class="map-marker"
-                  aria-label={`${footprint.province ?? "未知省份"} ${footprint.city}，${footprint.trips.length} 篇游记`}
-                  style={`--marker-x: ${footprint.x}%; --marker-y: ${footprint.y}%; --marker-color: ${color}; --marker-size: ${radius * 2}px;`}
-                >
-                  <span class="map-marker-halo" aria-hidden="true"></span>
-                  <span class="map-marker-dot" aria-hidden="true"></span>
-                  <span class="map-marker-label">{footprint.city}</span>
-                </a>
-              );
-            })
-          }
-        </div>
+        <button id="footprint-reset-map" class="map-reset-button" type="button" hidden>
+          返回全国
+        </button>
       </div>
-    </div>
+      <div id="footprint-echarts-map" class="footprint-echarts-map" role="img"></div>
+      <p id="footprint-map-status" class="footprint-map-status" role="status">
+        正在加载省市边界...
+      </p>
+    </section>
 
     <aside class="footprint-panel" aria-label="足迹统计">
       <div class="footprint-stat-row">
         <div>
-          <strong>{provinceSummaries.length}</strong>
+          <strong>{totals.provinceCount}</strong>
           <span>已点亮省份</span>
         </div>
         <div>
-          <strong>{visitedCityCount}</strong>
+          <strong>{totals.cityCount}</strong>
           <span>已到城市</span>
         </div>
         <div>
-          <strong>{totalTripCount}</strong>
+          <strong>{totals.tripCount}</strong>
           <span>公开游记</span>
         </div>
       </div>
 
       <div class="footprint-density">
-        <p class="meta">省份热度</p>
+        <p class="meta">访问密度</p>
         <div class="footprint-density-bar" aria-hidden="true">
           <span></span><span></span><span></span><span></span>
         </div>
         <div class="footprint-density-labels">
-          <span>少</span>
-          <span>多</span>
+          <span>未去过</span>
+          <span>常去</span>
         </div>
       </div>
 
-      <div class="province-summary-list">
-        {
-          provinceSummaries.map((province) => (
-            <a class="province-summary" href={`#${getProvinceId(province.province)}`}>
-              <span>{province.province}</span>
-              <strong>{province.cityCount} 城 · {province.tripCount} 篇</strong>
-              <i
-                style={`--province-progress: ${(province.tripCount / maxProvinceTripCount) * 100}%`}
-                aria-hidden="true"
-              ></i>
-            </a>
-          ))
-        }
+      <div class="footprint-current-region">
+        <p id="footprint-panel-kicker" class="meta">全国概览</p>
+        <h3 id="footprint-panel-title">已点亮的省份</h3>
+        <p id="footprint-panel-desc">
+          点击地图省份或下方列表，可查看该省已去过的城市。
+        </p>
       </div>
+
+      <div id="footprint-region-list" class="region-list" aria-live="polite"></div>
     </aside>
   </div>
 
@@ -168,7 +97,7 @@ const totalTripCount = footprints.reduce((total, footprint) => total + footprint
               <h3>{province.province}</h3>
             </div>
             <div class="author-swatch-list" aria-label="作者颜色">
-              {province.colors.map((color) => (
+              {province.authorColors.map((color) => (
                 <span class="author-swatch" style={`--swatch-color: ${color}`}></span>
               ))}
             </div>
@@ -188,4 +117,427 @@ const totalTripCount = footprints.reduce((total, footprint) => total + footprint
       ))
     }
   </div>
+
+  <script is:inline id="footprint-map-data" type="application/json" set:html={payloadJson}></script>
 </div>
+
+<script>
+  // @ts-nocheck
+  import { init, registerMap, use } from "echarts/core";
+  import { MapChart } from "echarts/charts";
+  import { TooltipComponent, VisualMapComponent } from "echarts/components";
+  import { CanvasRenderer } from "echarts/renderers";
+
+  use([MapChart, TooltipComponent, VisualMapComponent, CanvasRenderer]);
+
+  const API_BASE = "https://geojson.cn/api/china";
+  const CHINA_CODE = "100000";
+  const mapNode = document.querySelector("#footprint-echarts-map");
+  const dataNode = document.querySelector("#footprint-map-data");
+  const statusNode = document.querySelector("#footprint-map-status");
+  const resetButton = document.querySelector("#footprint-reset-map");
+  const regionListNode = document.querySelector("#footprint-region-list");
+  const panelKickerNode = document.querySelector("#footprint-panel-kicker");
+  const panelTitleNode = document.querySelector("#footprint-panel-title");
+  const panelDescNode = document.querySelector("#footprint-panel-desc");
+
+  const payload = JSON.parse(dataNode?.textContent ?? "{}");
+  const provinceSummaries = Array.isArray(payload.provinces) ? payload.provinces : [];
+  const totals = payload.totals ?? { provinceCount: 0, cityCount: 0, tripCount: 0 };
+  const geoCache = new Map();
+  let metaRoot = null;
+  let chart = null;
+  let currentMapLevel = "china";
+
+  function compactName(name) {
+    return String(name ?? "").trim().replace(/\s+/g, "");
+  }
+
+  function comparableName(name) {
+    return compactName(name).replace(
+      /(维吾尔自治区|壮族自治区|回族自治区|特别行政区|自治区|自治州|地区|盟|省|市)$/u,
+      "",
+    );
+  }
+
+  function sameRegionName(left, right) {
+    const normalizedLeft = compactName(left);
+    const normalizedRight = compactName(right);
+
+    return (
+      normalizedLeft === normalizedRight ||
+      (Boolean(normalizedLeft) &&
+        Boolean(normalizedRight) &&
+        comparableName(normalizedLeft) === comparableName(normalizedRight))
+    );
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function getFeatureName(feature) {
+    return (
+      feature?.properties?.name ??
+      feature?.properties?.fullname ??
+      feature?.properties?.adcode ??
+      feature?.properties?.code ??
+      ""
+    );
+  }
+
+  function findProvinceMeta(name) {
+    const provinces = metaRoot?.children ?? [];
+
+    return provinces.find((province) => sameRegionName(province.name, name)) ?? null;
+  }
+
+  function findProvinceSummary(name) {
+    return provinceSummaries.find((province) => sameRegionName(province.province, name)) ?? null;
+  }
+
+  function findCityFootprint(provinceName, cityName) {
+    const province = findProvinceSummary(provinceName);
+
+    return province?.cities.find((city) => sameRegionName(city.city, cityName)) ?? null;
+  }
+
+  async function fetchGeoJson(code) {
+    if (geoCache.has(code)) {
+      return geoCache.get(code);
+    }
+
+    const response = await fetch(`${API_BASE}/${code}.json`);
+
+    if (!response.ok) {
+      throw new Error(`GeoJSON ${code} 加载失败`);
+    }
+
+    const geoJson = await response.json();
+    geoCache.set(code, geoJson);
+
+    return geoJson;
+  }
+
+  async function fetchMeta() {
+    const response = await fetch(`${API_BASE}/_meta.json`);
+
+    if (!response.ok) {
+      throw new Error("省市索引加载失败");
+    }
+
+    const meta = await response.json();
+    const root = Array.isArray(meta) ? meta[0] : meta;
+
+    return root.files?.[0] ?? root;
+  }
+
+  function setStatus(message) {
+    if (statusNode) {
+      statusNode.textContent = message;
+    }
+  }
+
+  function setPanel(kicker, title, desc) {
+    if (panelKickerNode) panelKickerNode.textContent = kicker;
+    if (panelTitleNode) panelTitleNode.textContent = title;
+    if (panelDescNode) panelDescNode.textContent = desc;
+  }
+
+  function buildProvinceData(chinaGeoJson) {
+    return chinaGeoJson.features.map((feature) => {
+      const featureName = getFeatureName(feature);
+      const provinceMeta = findProvinceMeta(featureName);
+      const provinceName = provinceMeta?.name ?? featureName;
+      const summary = findProvinceSummary(provinceName);
+      const totalCities = provinceMeta?.children?.length || summary?.cityCount || 1;
+      const visitedCities = summary?.cityCount ?? 0;
+      const percent = Math.round((visitedCities / totalCities) * 100);
+
+      return {
+        name: featureName,
+        value: percent,
+        provinceName,
+        visitedCities,
+        totalCities,
+        tripCount: summary?.tripCount ?? 0,
+      };
+    });
+  }
+
+  function renderChinaMap(chinaGeoJson) {
+    currentMapLevel = "china";
+    const provinceData = buildProvinceData(chinaGeoJson);
+
+    chart.setOption(
+      {
+        animationDuration: 550,
+        backgroundColor: "transparent",
+        tooltip: {
+          trigger: "item",
+          confine: true,
+          formatter(params) {
+            const data = params.data ?? {};
+            const provinceName = data.provinceName ?? params.name;
+            return `${provinceName}<br/>已去 ${data.visitedCities ?? 0}/${data.totalCities ?? 0} 城<br/>${data.tripCount ?? 0} 篇游记`;
+          },
+        },
+        visualMap: {
+          min: 0,
+          max: 100,
+          show: false,
+          inRange: {
+            color: ["#f3eee5", "#d7e8dd", "#78aeb1", "#2f6f7b", "#c85f45"],
+          },
+        },
+        series: [
+          {
+            name: "中国足迹",
+            type: "map",
+            map: "china-footprints",
+            roam: true,
+            zoom: 1.18,
+            center: [104, 35],
+            data: provinceData,
+            selectedMode: "single",
+            label: {
+              show: true,
+              color: "#20302c",
+              fontSize: 10,
+            },
+            itemStyle: {
+              borderColor: "#fffaf2",
+              borderWidth: 1,
+              areaColor: "#f3eee5",
+            },
+            emphasis: {
+              label: {
+                color: "#20302c",
+                fontWeight: 800,
+              },
+              itemStyle: {
+                areaColor: "#d7a65f",
+              },
+            },
+            select: {
+              itemStyle: {
+                areaColor: "#c85f45",
+              },
+            },
+          },
+        ],
+      },
+      true,
+    );
+
+    renderProvinceList();
+    setPanel("全国概览", "已点亮的省份", "点击地图省份或下方列表，可查看该省已去过的城市。");
+    setStatus(`全国地图已加载，已点亮 ${totals.provinceCount} 个省份、${totals.cityCount} 个城市。`);
+    if (resetButton) resetButton.hidden = true;
+  }
+
+  function buildCityData(provinceMeta, provinceGeoJson) {
+    const totalCities = provinceMeta.children?.length || provinceGeoJson.features.length || 1;
+
+    return provinceGeoJson.features.map((feature) => {
+      const featureName = getFeatureName(feature);
+      const footprint = findCityFootprint(provinceMeta.name, featureName);
+
+      return {
+        name: featureName,
+        value: footprint?.trips.length ?? 0,
+        cityName: footprint?.city ?? featureName,
+        visited: Boolean(footprint),
+        tripCount: footprint?.trips.length ?? 0,
+        totalCities,
+      };
+    });
+  }
+
+  async function renderProvinceMap(provinceMeta) {
+    currentMapLevel = "province";
+    renderCityList(provinceMeta);
+    setPanel(provinceMeta.name, "城市足迹", "已去过的城市会在省内地图和列表中点亮。");
+
+    if (!provinceMeta.filename || !provinceMeta.children?.length) {
+      setStatus(`${provinceMeta.name} 已选中；直辖市和特别行政区按城市足迹展示。`);
+      if (resetButton) resetButton.hidden = false;
+      return;
+    }
+
+    setStatus(`正在加载 ${provinceMeta.name} 市级边界...`);
+    const provinceGeoJson = await fetchGeoJson(provinceMeta.filename);
+    const mapName = `province-${provinceMeta.filename}`;
+    registerMap(mapName, provinceGeoJson);
+    const cityData = buildCityData(provinceMeta, provinceGeoJson);
+    const maxCityTripCount = Math.max(1, ...cityData.map((city) => city.tripCount));
+
+    chart.setOption(
+      {
+        animationDuration: 500,
+        tooltip: {
+          trigger: "item",
+          confine: true,
+          formatter(params) {
+            const data = params.data ?? {};
+            return `${data.cityName ?? params.name}<br/>${data.visited ? "已去过" : "未记录"}<br/>${data.tripCount ?? 0} 篇游记`;
+          },
+        },
+        visualMap: {
+          min: 0,
+          max: maxCityTripCount,
+          show: false,
+          inRange: {
+            color: ["#f3eee5", "#78aeb1", "#2f6f7b", "#c85f45"],
+          },
+        },
+        series: [
+          {
+            name: `${provinceMeta.name}足迹`,
+            type: "map",
+            map: mapName,
+            roam: true,
+            zoom: 1.08,
+            data: cityData,
+            label: {
+              show: true,
+              color: "#20302c",
+              fontSize: 11,
+            },
+            itemStyle: {
+              borderColor: "#fffaf2",
+              borderWidth: 1,
+              areaColor: "#f3eee5",
+            },
+            emphasis: {
+              label: {
+                color: "#20302c",
+                fontWeight: 800,
+              },
+              itemStyle: {
+                areaColor: "#d7a65f",
+              },
+            },
+          },
+        ],
+      },
+      true,
+    );
+
+    setStatus(`${provinceMeta.name} 地图已加载。`);
+    if (resetButton) resetButton.hidden = false;
+  }
+
+  function renderProvinceList() {
+    if (!regionListNode) return;
+
+    regionListNode.innerHTML = provinceSummaries
+      .map((province) => {
+        const meta = findProvinceMeta(province.province);
+        const totalCities = meta?.children?.length || province.cityCount || 1;
+        const percent = Math.round((province.cityCount / totalCities) * 100);
+
+        return `
+          <button class="region-list-item" type="button" data-province="${escapeHtml(province.province)}">
+            <span>
+              <strong>${escapeHtml(province.province)}</strong>
+              <small>${province.cityCount}/${totalCities} 城 · ${province.tripCount} 篇</small>
+            </span>
+            <i style="--region-progress: ${percent}%"></i>
+          </button>
+        `;
+      })
+      .join("");
+  }
+
+  function renderCityList(provinceMeta) {
+    if (!regionListNode) return;
+
+    const summary = findProvinceSummary(provinceMeta.name);
+    const cities = provinceMeta.children?.length
+      ? provinceMeta.children.map((cityMeta) => ({
+          name: cityMeta.name,
+          footprint: findCityFootprint(provinceMeta.name, cityMeta.name),
+        }))
+      : (summary?.cities ?? []).map((city) => ({ name: city.city, footprint: city }));
+
+    regionListNode.innerHTML = cities
+      .map(({ name, footprint }) => {
+        const tripLinks =
+          footprint?.trips
+            .map((trip) => `<a href="/trips/${escapeHtml(trip.slug)}/">${escapeHtml(trip.title)}</a>`)
+            .join("") ?? "";
+
+        return `
+          <div class="region-list-item ${footprint ? "is-visited" : ""}">
+            <span>
+              <strong>${escapeHtml(footprint?.city ?? name)}</strong>
+              <small>${footprint ? `${footprint.trips.length} 篇游记` : "未记录"}</small>
+            </span>
+            <div class="region-trip-links">${tripLinks}</div>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  async function selectProvince(name) {
+    const provinceMeta = findProvinceMeta(name);
+
+    if (!provinceMeta) {
+      setStatus(`没有在 GeoJSON.CN 索引中找到 ${name}。`);
+      return;
+    }
+
+    try {
+      await renderProvinceMap(provinceMeta);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "省级地图加载失败。");
+      renderCityList(provinceMeta);
+    }
+  }
+
+  async function initFootprintMap() {
+    if (!(mapNode instanceof HTMLElement)) return;
+
+    try {
+      chart = init(mapNode, null, { renderer: "canvas" });
+      metaRoot = await fetchMeta();
+      const chinaGeoJson = await fetchGeoJson(CHINA_CODE);
+      registerMap("china-footprints", chinaGeoJson);
+      renderChinaMap(chinaGeoJson);
+
+      chart.on("click", (params) => {
+        if (currentMapLevel !== "china") return;
+        const provinceName = params.data?.provinceName ?? params.name;
+        selectProvince(provinceName);
+      });
+
+      regionListNode?.addEventListener("click", (event) => {
+        const target = event.target instanceof Element ? event.target.closest("[data-province]") : null;
+        const provinceName = target?.getAttribute("data-province");
+
+        if (provinceName) {
+          selectProvince(provinceName);
+        }
+      });
+
+      resetButton?.addEventListener("click", () => {
+        renderChinaMap(chinaGeoJson);
+      });
+
+      window.addEventListener("resize", () => chart?.resize());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "地图加载失败";
+      setStatus(`${message}，下方仍保留足迹列表。`);
+      renderProvinceList();
+    }
+  }
+
+  initFootprintMap();
+</script>

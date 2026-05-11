@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { chinaMapCenter } from "../data/china-city-coordinates";
-import { aggregatePublishedTripsByCity, type MapTripInput } from "./map-data";
+import {
+  aggregatePublishedTripsByCity,
+  getFootprintTotals,
+  normalizeAreaName,
+  summarizeFootprintsByProvince,
+  type MapTripInput,
+} from "./map-data";
 
 const baseTrip: MapTripInput = {
   id: "trip-1",
@@ -31,14 +36,38 @@ describe("aggregatePublishedTripsByCity", () => {
     expect(footprints[0].city).toBe("上海市");
   });
 
-  it("aggregates multiple published trips in the same city", () => {
+  it("aggregates multiple published trips in the same province and city", () => {
     const footprints = aggregatePublishedTripsByCity([
       baseTrip,
       { ...baseTrip, id: "trip-2", slug: "trip-two", title: "第二篇游记" },
     ]);
 
     expect(footprints).toHaveLength(1);
+    expect(footprints[0]).toMatchObject({
+      province: "上海市",
+      city: "上海市",
+    });
     expect(footprints[0].trips.map((trip) => trip.slug)).toEqual(["trip-one", "trip-two"]);
+  });
+
+  it("keeps same-name cities separate when provinces differ", () => {
+    const footprints = aggregatePublishedTripsByCity([
+      { ...baseTrip, province: "吉林省", city: "吉林市" },
+      { ...baseTrip, id: "trip-2", province: "吉林市", city: "吉林市" },
+    ]);
+
+    expect(footprints).toHaveLength(2);
+  });
+
+  it("normalizes blank province and city names", () => {
+    const footprints = aggregatePublishedTripsByCity([
+      { ...baseTrip, province: "   ", city: "  " },
+    ]);
+
+    expect(footprints[0]).toMatchObject({
+      province: "未知省份",
+      city: "未知城市",
+    });
   });
 
   it("keeps colors from different authors in one city", () => {
@@ -62,71 +91,6 @@ describe("aggregatePublishedTripsByCity", () => {
     ]);
   });
 
-  it("places unknown provinces at the map center", () => {
-    const footprints = aggregatePublishedTripsByCity([
-      { ...baseTrip, province: "未知省份", city: "未知城市" },
-    ]);
-
-    expect(footprints[0]).toMatchObject({
-      province: "未知省份",
-      city: "未知城市",
-      x: chinaMapCenter.x,
-      y: chinaMapCenter.y,
-      isFallbackLocation: true,
-    });
-  });
-
-  it("uses province and city names to place a visited city", () => {
-    const footprints = aggregatePublishedTripsByCity([
-      {
-        ...baseTrip,
-        province: "陕西省",
-        city: "渭南市",
-      },
-    ]);
-
-    expect(footprints[0]).toMatchObject({
-      province: "陕西省",
-      city: "渭南市",
-      isFallbackLocation: false,
-    });
-    expect(footprints[0].x).not.toBe(chinaMapCenter.x);
-    expect(footprints[0].y).not.toBe(chinaMapCenter.y);
-  });
-
-  it("projects known cities onto the uploaded China map image area", () => {
-    const footprints = aggregatePublishedTripsByCity([
-      {
-        ...baseTrip,
-        province: "陕西省",
-        city: "渭南市",
-      },
-    ]);
-
-    expect(footprints[0].x).toBeGreaterThan(50);
-    expect(footprints[0].x).toBeLessThan(55);
-    expect(footprints[0].y).toBeGreaterThan(50);
-    expect(footprints[0].y).toBeLessThan(55);
-  });
-
-  it("falls back to the province center when a city has no exact marker", () => {
-    const footprints = aggregatePublishedTripsByCity([
-      {
-        ...baseTrip,
-        province: "陕西省",
-        city: "还没录入的城市",
-      },
-    ]);
-
-    expect(footprints[0]).toMatchObject({
-      province: "陕西省",
-      city: "还没录入的城市",
-      isFallbackLocation: true,
-    });
-    expect(footprints[0].x).not.toBe(chinaMapCenter.x);
-    expect(footprints[0].y).not.toBe(chinaMapCenter.y);
-  });
-
   it("falls back when author color is malformed", () => {
     const footprints = aggregatePublishedTripsByCity([
       {
@@ -141,5 +105,34 @@ describe("aggregatePublishedTripsByCity", () => {
 
     expect(footprints[0].authorColors).toEqual(["#2f6f7b"]);
     expect(footprints[0].trips[0].author.mapColor).toBe("#2f6f7b");
+  });
+});
+
+describe("summarizeFootprintsByProvince", () => {
+  it("creates province summaries with city and trip totals", () => {
+    const footprints = aggregatePublishedTripsByCity([
+      baseTrip,
+      { ...baseTrip, id: "trip-2", province: "陕西省", city: "西安市" },
+      { ...baseTrip, id: "trip-3", province: "陕西省", city: "渭南市" },
+      { ...baseTrip, id: "trip-4", province: "陕西省", city: "渭南市" },
+    ]);
+    const summaries = summarizeFootprintsByProvince(footprints);
+
+    expect(summaries[0]).toMatchObject({
+      province: "陕西省",
+      cityCount: 2,
+      tripCount: 3,
+    });
+    expect(getFootprintTotals(summaries)).toEqual({
+      provinceCount: 2,
+      cityCount: 3,
+      tripCount: 4,
+    });
+  });
+});
+
+describe("normalizeAreaName", () => {
+  it("trims and removes internal whitespace", () => {
+    expect(normalizeAreaName(" 陕 西 省 ")).toBe("陕西省");
   });
 });

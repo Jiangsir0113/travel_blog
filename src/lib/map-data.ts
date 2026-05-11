@@ -1,9 +1,3 @@
-import {
-  chinaMapCenter,
-  getCityLocation,
-  getProvinceLocation,
-} from "../data/china-city-coordinates";
-
 export type MapTripStatus = "draft" | "published";
 
 export type MapTripAuthor = {
@@ -41,17 +35,18 @@ export type FootprintTripLink = {
 };
 
 export type CityFootprint = {
-  province: string | null;
+  province: string;
   city: string;
-  x: number;
-  y: number;
-  provinceX: number;
-  provinceY: number;
-  provinceHighlightWidth: number;
-  provinceHighlightHeight: number;
-  isFallbackLocation: boolean;
   trips: FootprintTripLink[];
   authorColors: string[];
+};
+
+export type ProvinceFootprint = {
+  province: string;
+  cityCount: number;
+  tripCount: number;
+  authorColors: string[];
+  cities: CityFootprint[];
 };
 
 const fallbackAuthor = {
@@ -60,31 +55,28 @@ const fallbackAuthor = {
   mapColor: "#2f6f7b",
 };
 
+const unknownProvince = "未知省份";
+const unknownCity = "未知城市";
 const hexColorPattern = /^#[0-9A-Fa-f]{6}$/;
+
 export function aggregatePublishedTripsByCity(trips: MapTripInput[]): CityFootprint[] {
   const cityMap = new Map<string, CityFootprint>();
 
   trips
     .filter((trip) => trip.status === "published")
     .forEach((trip) => {
-      const provinceLocation = getProvinceLocation(trip.province);
-      const cityLocation = getCityLocation(trip.province, trip.city);
-      const coordinate = cityLocation ?? provinceLocation;
+      const province = normalizeAreaName(trip.province) || unknownProvince;
+      const city = normalizeAreaName(trip.city) || unknownCity;
       const author = normalizeAuthor(trip.profiles);
-      const cityKey = `${trip.province ?? "未知省份"}::${trip.city}`;
+      const cityKey = `${province}::${city}`;
       const existing =
         cityMap.get(cityKey) ??
-        createCityFootprint({
-          province: trip.province ?? null,
-          city: trip.city,
-          x: coordinate?.x ?? chinaMapCenter.x,
-          y: coordinate?.y ?? chinaMapCenter.y,
-          provinceX: provinceLocation?.x ?? chinaMapCenter.x,
-          provinceY: provinceLocation?.y ?? chinaMapCenter.y,
-          provinceHighlightWidth: provinceLocation?.highlightWidth ?? 8,
-          provinceHighlightHeight: provinceLocation?.highlightHeight ?? 6,
-          isFallbackLocation: !cityLocation,
-        });
+        ({
+          province,
+          city,
+          trips: [],
+          authorColors: [],
+        } satisfies CityFootprint);
 
       existing.trips.push({
         id: trip.id,
@@ -102,33 +94,56 @@ export function aggregatePublishedTripsByCity(trips: MapTripInput[]): CityFootpr
       cityMap.set(cityKey, existing);
     });
 
-  return Array.from(cityMap.values()).sort((a, b) => a.city.localeCompare(b.city, "zh-CN"));
+  return Array.from(cityMap.values()).sort(
+    (a, b) => a.province.localeCompare(b.province, "zh-CN") || a.city.localeCompare(b.city, "zh-CN"),
+  );
 }
 
-function createCityFootprint({
-  province,
-  city,
-  x,
-  y,
-  provinceX,
-  provinceY,
-  provinceHighlightWidth,
-  provinceHighlightHeight,
-  isFallbackLocation,
-}: Omit<CityFootprint, "trips" | "authorColors">): CityFootprint {
-  return {
-    province,
-    city,
-    x,
-    y,
-    provinceX,
-    provinceY,
-    provinceHighlightWidth,
-    provinceHighlightHeight,
-    isFallbackLocation,
-    trips: [],
-    authorColors: [],
-  };
+export function summarizeFootprintsByProvince(footprints: CityFootprint[]): ProvinceFootprint[] {
+  const provinceMap = new Map<string, ProvinceFootprint>();
+
+  footprints.forEach((footprint) => {
+    const existing =
+      provinceMap.get(footprint.province) ??
+      ({
+        province: footprint.province,
+        cityCount: 0,
+        tripCount: 0,
+        authorColors: [],
+        cities: [],
+      } satisfies ProvinceFootprint);
+
+    existing.cityCount += 1;
+    existing.tripCount += footprint.trips.length;
+    existing.cities.push(footprint);
+
+    footprint.authorColors.forEach((color) => {
+      if (!existing.authorColors.includes(color)) {
+        existing.authorColors.push(color);
+      }
+    });
+
+    provinceMap.set(footprint.province, existing);
+  });
+
+  return Array.from(provinceMap.values()).sort(
+    (a, b) => b.tripCount - a.tripCount || a.province.localeCompare(b.province, "zh-CN"),
+  );
+}
+
+export function getFootprintTotals(provinces: ProvinceFootprint[]) {
+  return provinces.reduce(
+    (totals, province) => ({
+      provinceCount: totals.provinceCount + 1,
+      cityCount: totals.cityCount + province.cityCount,
+      tripCount: totals.tripCount + province.tripCount,
+    }),
+    { provinceCount: 0, cityCount: 0, tripCount: 0 },
+  );
+}
+
+export function normalizeAreaName(value: string | null | undefined) {
+  return value?.trim().replace(/\s+/g, "") ?? "";
 }
 
 function normalizeAuthor(author: MapTripInput["profiles"]): FootprintTripLink["author"] {

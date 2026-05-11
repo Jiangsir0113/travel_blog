@@ -432,115 +432,68 @@ h3 {
   gap: 22px;
 }
 
-.footprint-overview {
+.footprint-geo-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
   gap: 18px;
   align-items: stretch;
 }
 
-.footprint-canvas {
-  overflow-x: auto;
+.footprint-map-surface {
+  display: grid;
+  grid-template-rows: auto minmax(420px, 58vw) auto;
+  min-width: 0;
+  overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--water), transparent 92%), transparent 42%),
+    white;
 }
 
-.china-map-stage {
-  position: relative;
-  min-width: 680px;
+.footprint-map-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px 18px 0;
 }
 
-.china-map-image {
+.footprint-map-toolbar h3,
+.footprint-map-toolbar .meta {
+  margin: 0;
+}
+
+.map-reset-button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, white, var(--paper) 20%);
+  color: var(--forest);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.map-reset-button:hover,
+.map-reset-button:focus-visible {
+  border-color: var(--water);
+  outline: 3px solid color-mix(in srgb, var(--water), transparent 82%);
+}
+
+.footprint-echarts-map {
   width: 100%;
-  height: auto;
+  min-height: 420px;
 }
 
-.map-marker-layer {
-  position: absolute;
-  inset: 0;
-}
-
-.province-highlight-layer {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.province-highlight {
-  position: absolute;
-  left: var(--province-x);
-  top: var(--province-y);
-  width: var(--province-width);
-  height: var(--province-height);
-  border: 1px solid color-mix(in srgb, var(--clay), transparent 24%);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--clay), transparent 45%);
-  box-shadow:
-    0 0 0 2px color-mix(in srgb, white, transparent 28%),
-    0 8px 24px color-mix(in srgb, var(--clay), transparent 52%);
-  opacity: var(--province-opacity, 0.26);
-  transform: translate(-50%, -50%) rotate(-8deg);
-  mix-blend-mode: multiply;
-}
-
-.map-marker {
-  position: absolute;
-  left: var(--marker-x);
-  top: var(--marker-y);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transform: translateY(-50%);
-  color: var(--ink);
-  font-size: clamp(0.72rem, 1.5vw, 0.86rem);
-  font-weight: 900;
-  text-decoration: none;
-  text-shadow:
-    0 1px 0 white,
-    1px 0 0 white,
-    0 -1px 0 white,
-    -1px 0 0 white;
-  z-index: 1;
-}
-
-.map-marker-halo,
-.map-marker-dot {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  border-radius: 999px;
-  transform: translate(-50%, -50%);
-}
-
-.map-marker-halo {
-  width: calc(var(--marker-size) + 8px);
-  height: calc(var(--marker-size) + 8px);
-  border: 1px solid color-mix(in srgb, var(--forest), transparent 42%);
-  background: color-mix(in srgb, white, transparent 8%);
-  box-shadow: 0 0 0 3px color-mix(in srgb, white, transparent 30%);
-}
-
-.map-marker-dot {
-  width: var(--marker-size);
-  height: var(--marker-size);
-  border: 2px solid white;
-  background: var(--marker-color, var(--clay));
-  box-shadow: 0 3px 10px color-mix(in srgb, var(--ink), transparent 70%);
-}
-
-.map-marker-label {
-  position: relative;
-  min-width: max-content;
-  margin-left: calc(var(--marker-size) / 2 + 8px);
-  padding: 2px 5px;
-  border-radius: 4px;
-  background: color-mix(in srgb, white, transparent 16%);
-}
-
-.map-marker:hover .map-marker-dot,
-.map-marker:focus-visible .map-marker-dot {
-  border-color: var(--sun);
+.footprint-map-status {
+  margin: 0;
+  padding: 0 18px 16px;
+  color: var(--muted);
+  font-size: 0.86rem;
 }
 
 .footprint-panel {
@@ -624,45 +577,84 @@ h3 {
   font-size: 0.78rem;
 }
 
-.province-summary-list {
+.footprint-current-region {
+  display: grid;
+  gap: 6px;
+}
+
+.footprint-current-region h3,
+.footprint-current-region p {
+  margin: 0;
+}
+
+.region-list {
   display: grid;
   gap: 10px;
+  max-height: 430px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
-.province-summary {
+.region-list-item {
   display: grid;
-  gap: 5px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--line);
+  gap: 7px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
   color: var(--ink);
-  text-decoration: none;
+  font: inherit;
+  text-align: left;
 }
 
-.province-summary:last-child {
-  border-bottom: 0;
+.region-list-item:is(button) {
+  cursor: pointer;
 }
 
-.province-summary strong {
+.region-list-item:is(button):hover,
+.region-list-item:is(button):focus-visible,
+.region-list-item.is-visited {
+  border-color: color-mix(in srgb, var(--water), transparent 45%);
+  background: color-mix(in srgb, var(--water), transparent 90%);
+}
+
+.region-list-item span,
+.region-trip-links {
+  display: grid;
+  gap: 2px;
+}
+
+.region-list-item strong {
+  line-height: 1.25;
+}
+
+.region-list-item small {
   color: var(--muted);
   font-size: 0.84rem;
 }
 
-.province-summary i {
+.region-list-item i {
   display: block;
   width: 100%;
-  height: 5px;
+  height: 6px;
   overflow: hidden;
   border-radius: 999px;
   background: color-mix(in srgb, var(--line), white 28%);
 }
 
-.province-summary i::before {
+.region-list-item i::before {
   display: block;
-  width: var(--province-progress);
+  width: var(--region-progress);
   height: 100%;
   border-radius: inherit;
-  background: var(--clay);
+  background: linear-gradient(90deg, var(--water), var(--clay));
   content: "";
+}
+
+.region-trip-links a {
+  font-size: 0.88rem;
+  font-weight: 800;
 }
 
 .footprint-city-grid {
@@ -750,7 +742,7 @@ h3 {
 
   .grid,
   .photo-strip,
-  .footprint-overview,
+  .footprint-geo-layout,
   .footprint-city-grid {
     grid-template-columns: 1fr;
   }
