@@ -8,74 +8,181 @@ interface Props {
 const { footprints } = Astro.props;
 
 function markerRadius(tripCount: number) {
-  return Math.min(17, 8 + tripCount * 2);
+  return Math.min(7, 4 + tripCount);
 }
+
+function getProvinceId(province: string) {
+  return `province-${encodeURIComponent(province)}`;
+}
+
+const provinceMap = footprints.reduce((provinceMap, footprint) => {
+    const province = footprint.province ?? "未知省份";
+    const existing =
+      provinceMap.get(province) ??
+      {
+        province,
+        x: footprint.provinceX,
+        y: footprint.provinceY,
+        width: footprint.provinceHighlightWidth,
+        height: footprint.provinceHighlightHeight,
+        cityCount: 0,
+        tripCount: 0,
+        colors: [] as string[],
+        cities: [] as CityFootprint[],
+      };
+
+    existing.cityCount += 1;
+    existing.tripCount += footprint.trips.length;
+    existing.cities.push(footprint);
+    footprint.authorColors.forEach((color) => {
+      if (!existing.colors.includes(color)) {
+        existing.colors.push(color);
+      }
+    });
+    provinceMap.set(province, existing);
+    return provinceMap;
+  }, new Map<string, {
+    province: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    cityCount: number;
+    tripCount: number;
+    colors: string[];
+    cities: CityFootprint[];
+  }>());
+
+const provinceSummaries = Array.from(provinceMap.values()).sort(
+  (a, b) => b.tripCount - a.tripCount || a.province.localeCompare(b.province, "zh-CN"),
+);
+
+const maxProvinceTripCount = Math.max(
+  1,
+  ...provinceSummaries.map((province) => province.tripCount),
+);
+const visitedCityCount = footprints.length;
+const totalTripCount = footprints.reduce((total, footprint) => total + footprint.trips.length, 0);
 ---
 
 <div class="footprint-map" aria-labelledby="footprint-map-title">
   <h3 id="footprint-map-title" class="sr-only">中国城市足迹图</h3>
   <p id="footprint-map-desc" class="sr-only">地图上标记已发布游记覆盖的城市，并用作者颜色区分足迹。</p>
 
-  <div class="footprint-canvas">
-    <div
-      class="china-map-stage"
-      role="img"
-      aria-labelledby="footprint-map-title footprint-map-desc"
-    >
-      <img class="china-map-image" src="/maps/china-map.jpg" alt="" loading="lazy" />
-      <div class="map-marker-layer">
-        {
-          footprints.map((footprint) => {
-            const radius = markerRadius(footprint.trips.length);
-            const color = footprint.authorColors[0] ?? "#2f6f7b";
-            const firstTrip = footprint.trips[0];
+  <div class="footprint-overview">
+    <div class="footprint-canvas">
+      <div
+        class="china-map-stage"
+        role="img"
+        aria-labelledby="footprint-map-title footprint-map-desc"
+      >
+        <img class="china-map-image" src="/maps/china-map.jpg" alt="" loading="lazy" />
+        <div class="province-highlight-layer" aria-hidden="true">
+          {
+            provinceSummaries.map((province) => (
+              <span
+                class="province-highlight"
+                style={`--province-x: ${province.x}%; --province-y: ${province.y}%; --province-width: ${province.width}%; --province-height: ${province.height}%; --province-opacity: ${0.18 + (province.tripCount / maxProvinceTripCount) * 0.22};`}
+              ></span>
+            ))
+          }
+        </div>
+        <div class="map-marker-layer">
+          {
+            footprints.map((footprint) => {
+              const radius = markerRadius(footprint.trips.length);
+              const color = footprint.authorColors[0] ?? "#2f6f7b";
+              const firstTrip = footprint.trips[0];
 
-            return (
-              <a
-                href={firstTrip ? `/trips/${firstTrip.slug}/` : "#"}
-                class="map-marker"
-                aria-label={`${footprint.city}，${footprint.trips.length} 篇游记`}
-                style={`--marker-x: ${footprint.x}%; --marker-y: ${footprint.y}%; --marker-color: ${color}; --marker-size: ${radius * 2}px;`}
-              >
-                <span class="map-marker-halo" aria-hidden="true"></span>
-                <span class="map-marker-dot" aria-hidden="true"></span>
-                <span class="map-marker-label">{footprint.city}</span>
-              </a>
-            );
-          })
-        }
+              return (
+                <a
+                  href={firstTrip ? `/trips/${firstTrip.slug}/` : "#"}
+                  class="map-marker"
+                  aria-label={`${footprint.province ?? "未知省份"} ${footprint.city}，${footprint.trips.length} 篇游记`}
+                  style={`--marker-x: ${footprint.x}%; --marker-y: ${footprint.y}%; --marker-color: ${color}; --marker-size: ${radius * 2}px;`}
+                >
+                  <span class="map-marker-halo" aria-hidden="true"></span>
+                  <span class="map-marker-dot" aria-hidden="true"></span>
+                  <span class="map-marker-label">{footprint.city}</span>
+                </a>
+              );
+            })
+          }
+        </div>
       </div>
     </div>
+
+    <aside class="footprint-panel" aria-label="足迹统计">
+      <div class="footprint-stat-row">
+        <div>
+          <strong>{provinceSummaries.length}</strong>
+          <span>已点亮省份</span>
+        </div>
+        <div>
+          <strong>{visitedCityCount}</strong>
+          <span>已到城市</span>
+        </div>
+        <div>
+          <strong>{totalTripCount}</strong>
+          <span>公开游记</span>
+        </div>
+      </div>
+
+      <div class="footprint-density">
+        <p class="meta">省份热度</p>
+        <div class="footprint-density-bar" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <div class="footprint-density-labels">
+          <span>少</span>
+          <span>多</span>
+        </div>
+      </div>
+
+      <div class="province-summary-list">
+        {
+          provinceSummaries.map((province) => (
+            <a class="province-summary" href={`#${getProvinceId(province.province)}`}>
+              <span>{province.province}</span>
+              <strong>{province.cityCount} 城 · {province.tripCount} 篇</strong>
+              <i
+                style={`--province-progress: ${(province.tripCount / maxProvinceTripCount) * 100}%`}
+                aria-hidden="true"
+              ></i>
+            </a>
+          ))
+        }
+      </div>
+    </aside>
   </div>
 
   <div class="footprint-city-grid" aria-label="城市游记列表">
     {
-      footprints.map((footprint) => (
-        <article class="footprint-card">
+      provinceSummaries.map((province) => (
+        <article id={getProvinceId(province.province)} class="footprint-card">
           <div class="footprint-card-header">
             <div>
               <p class="meta">
-                {footprint.isFallbackLocation ? "位置待校准" : "城市足迹"} ·{" "}
-                {footprint.trips.length} 篇
+                已点亮 {province.cityCount} 城 · {province.tripCount} 篇
               </p>
-              <h3>{footprint.city}</h3>
+              <h3>{province.province}</h3>
             </div>
             <div class="author-swatch-list" aria-label="作者颜色">
-              {footprint.authorColors.map((color) => (
+              {province.colors.map((color) => (
                 <span class="author-swatch" style={`--swatch-color: ${color}`}></span>
               ))}
             </div>
           </div>
 
           <ul class="footprint-trip-list">
-            {footprint.trips.map((trip) => (
+            {province.cities.flatMap((footprint) => footprint.trips.map((trip) => (
               <li>
                 <a href={`/trips/${trip.slug}/`}>{trip.title}</a>
                 <span class="meta">
-                  {trip.destinationName} · {trip.author.name}
+                  {footprint.city} · {trip.destinationName} · {trip.author.name}
                 </span>
               </li>
-            ))}
+            )))}
           </ul>
         </article>
       ))

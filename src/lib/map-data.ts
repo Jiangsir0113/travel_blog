@@ -1,7 +1,7 @@
 import {
   chinaMapCenter,
-  cityCoordinates,
-  projectChinaGeoPoint,
+  getCityLocation,
+  getProvinceLocation,
 } from "../data/china-city-coordinates";
 
 export type MapTripStatus = "draft" | "published";
@@ -16,6 +16,7 @@ export type MapTripInput = {
   id: string;
   slug: string;
   title: string;
+  province?: string | null;
   city: string;
   destination_name: string;
   latitude?: number | string | null;
@@ -40,9 +41,14 @@ export type FootprintTripLink = {
 };
 
 export type CityFootprint = {
+  province: string | null;
   city: string;
   x: number;
   y: number;
+  provinceX: number;
+  provinceY: number;
+  provinceHighlightWidth: number;
+  provinceHighlightHeight: number;
   isFallbackLocation: boolean;
   trips: FootprintTripLink[];
   authorColors: string[];
@@ -61,15 +67,23 @@ export function aggregatePublishedTripsByCity(trips: MapTripInput[]): CityFootpr
   trips
     .filter((trip) => trip.status === "published")
     .forEach((trip) => {
-      const coordinate = projectTripCoordinates(trip) ?? cityCoordinates[trip.city];
+      const provinceLocation = getProvinceLocation(trip.province);
+      const cityLocation = getCityLocation(trip.province, trip.city);
+      const coordinate = cityLocation ?? provinceLocation;
       const author = normalizeAuthor(trip.profiles);
+      const cityKey = `${trip.province ?? "未知省份"}::${trip.city}`;
       const existing =
-        cityMap.get(trip.city) ??
+        cityMap.get(cityKey) ??
         createCityFootprint({
+          province: trip.province ?? null,
           city: trip.city,
           x: coordinate?.x ?? chinaMapCenter.x,
           y: coordinate?.y ?? chinaMapCenter.y,
-          isFallbackLocation: !coordinate,
+          provinceX: provinceLocation?.x ?? chinaMapCenter.x,
+          provinceY: provinceLocation?.y ?? chinaMapCenter.y,
+          provinceHighlightWidth: provinceLocation?.highlightWidth ?? 8,
+          provinceHighlightHeight: provinceLocation?.highlightHeight ?? 6,
+          isFallbackLocation: !cityLocation,
         });
 
       existing.trips.push({
@@ -85,22 +99,32 @@ export function aggregatePublishedTripsByCity(trips: MapTripInput[]): CityFootpr
         existing.authorColors.push(author.mapColor);
       }
 
-      cityMap.set(trip.city, existing);
+      cityMap.set(cityKey, existing);
     });
 
   return Array.from(cityMap.values()).sort((a, b) => a.city.localeCompare(b.city, "zh-CN"));
 }
 
 function createCityFootprint({
+  province,
   city,
   x,
   y,
+  provinceX,
+  provinceY,
+  provinceHighlightWidth,
+  provinceHighlightHeight,
   isFallbackLocation,
 }: Omit<CityFootprint, "trips" | "authorColors">): CityFootprint {
   return {
+    province,
     city,
     x,
     y,
+    provinceX,
+    provinceY,
+    provinceHighlightWidth,
+    provinceHighlightHeight,
     isFallbackLocation,
     trips: [],
     authorColors: [],
@@ -119,11 +143,4 @@ function normalizeAuthor(author: MapTripInput["profiles"]): FootprintTripLink["a
 
 function normalizeMapColor(mapColor: string | null | undefined) {
   return mapColor && hexColorPattern.test(mapColor) ? mapColor : fallbackAuthor.mapColor;
-}
-
-function projectTripCoordinates(trip: Pick<MapTripInput, "latitude" | "longitude">) {
-  const latitude = Number(trip.latitude);
-  const longitude = Number(trip.longitude);
-
-  return projectChinaGeoPoint({ latitude, longitude });
 }

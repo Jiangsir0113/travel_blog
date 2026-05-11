@@ -7,6 +7,7 @@ const baseTrip: MapTripInput = {
   id: "trip-1",
   slug: "trip-one",
   title: "第一篇游记",
+  province: "上海市",
   city: "上海市",
   destination_name: "上海",
   status: "published",
@@ -61,12 +62,13 @@ describe("aggregatePublishedTripsByCity", () => {
     ]);
   });
 
-  it("places unknown cities at the map center", () => {
+  it("places unknown provinces at the map center", () => {
     const footprints = aggregatePublishedTripsByCity([
-      { ...baseTrip, city: "未知城市" },
+      { ...baseTrip, province: "未知省份", city: "未知城市" },
     ]);
 
     expect(footprints[0]).toMatchObject({
+      province: "未知省份",
       city: "未知城市",
       x: chinaMapCenter.x,
       y: chinaMapCenter.y,
@@ -74,17 +76,17 @@ describe("aggregatePublishedTripsByCity", () => {
     });
   });
 
-  it("uses trip coordinates before falling back to the city coordinate table", () => {
+  it("uses province and city names to place a visited city", () => {
     const footprints = aggregatePublishedTripsByCity([
       {
         ...baseTrip,
+        province: "陕西省",
         city: "渭南市",
-        latitude: 34.46333,
-        longitude: 110.08083,
       },
     ]);
 
     expect(footprints[0]).toMatchObject({
+      province: "陕西省",
       city: "渭南市",
       isFallbackLocation: false,
     });
@@ -92,13 +94,12 @@ describe("aggregatePublishedTripsByCity", () => {
     expect(footprints[0].y).not.toBe(chinaMapCenter.y);
   });
 
-  it("projects trip coordinates onto the uploaded China map image area", () => {
+  it("projects known cities onto the uploaded China map image area", () => {
     const footprints = aggregatePublishedTripsByCity([
       {
         ...baseTrip,
+        province: "陕西省",
         city: "渭南市",
-        latitude: 34.46333,
-        longitude: 110.08083,
       },
     ]);
 
@@ -106,6 +107,24 @@ describe("aggregatePublishedTripsByCity", () => {
     expect(footprints[0].x).toBeLessThan(55);
     expect(footprints[0].y).toBeGreaterThan(50);
     expect(footprints[0].y).toBeLessThan(55);
+  });
+
+  it("falls back to the province center when a city has no exact marker", () => {
+    const footprints = aggregatePublishedTripsByCity([
+      {
+        ...baseTrip,
+        province: "陕西省",
+        city: "还没录入的城市",
+      },
+    ]);
+
+    expect(footprints[0]).toMatchObject({
+      province: "陕西省",
+      city: "还没录入的城市",
+      isFallbackLocation: true,
+    });
+    expect(footprints[0].x).not.toBe(chinaMapCenter.x);
+    expect(footprints[0].y).not.toBe(chinaMapCenter.y);
   });
 
   it("falls back when author color is malformed", () => {

@@ -432,6 +432,13 @@ h3 {
   gap: 22px;
 }
 
+.footprint-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  gap: 18px;
+  align-items: stretch;
+}
+
 .footprint-canvas {
   overflow-x: auto;
   border: 1px solid var(--line);
@@ -454,6 +461,29 @@ h3 {
   inset: 0;
 }
 
+.province-highlight-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.province-highlight {
+  position: absolute;
+  left: var(--province-x);
+  top: var(--province-y);
+  width: var(--province-width);
+  height: var(--province-height);
+  border: 1px solid color-mix(in srgb, var(--clay), transparent 24%);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--clay), transparent 45%);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, white, transparent 28%),
+    0 8px 24px color-mix(in srgb, var(--clay), transparent 52%);
+  opacity: var(--province-opacity, 0.26);
+  transform: translate(-50%, -50%) rotate(-8deg);
+  mix-blend-mode: multiply;
+}
+
 .map-marker {
   position: absolute;
   left: var(--marker-x);
@@ -463,7 +493,7 @@ h3 {
   gap: 6px;
   transform: translateY(-50%);
   color: var(--ink);
-  font-size: clamp(0.78rem, 1.8vw, 0.95rem);
+  font-size: clamp(0.72rem, 1.5vw, 0.86rem);
   font-weight: 900;
   text-decoration: none;
   text-shadow:
@@ -484,9 +514,9 @@ h3 {
 }
 
 .map-marker-halo {
-  width: calc(var(--marker-size) + 12px);
-  height: calc(var(--marker-size) + 12px);
-  border: 2px solid color-mix(in srgb, var(--forest), transparent 32%);
+  width: calc(var(--marker-size) + 8px);
+  height: calc(var(--marker-size) + 8px);
+  border: 1px solid color-mix(in srgb, var(--forest), transparent 42%);
   background: color-mix(in srgb, white, transparent 8%);
   box-shadow: 0 0 0 3px color-mix(in srgb, white, transparent 30%);
 }
@@ -494,7 +524,7 @@ h3 {
 .map-marker-dot {
   width: var(--marker-size);
   height: var(--marker-size);
-  border: 3px solid white;
+  border: 2px solid white;
   background: var(--marker-color, var(--clay));
   box-shadow: 0 3px 10px color-mix(in srgb, var(--ink), transparent 70%);
 }
@@ -511,6 +541,128 @@ h3 {
 .map-marker:hover .map-marker-dot,
 .map-marker:focus-visible .map-marker-dot {
   border-color: var(--sun);
+}
+
+.footprint-panel {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, white, var(--paper) 24%);
+}
+
+.footprint-stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.footprint-stat-row div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+
+.footprint-stat-row strong,
+.footprint-stat-row span {
+  display: block;
+}
+
+.footprint-stat-row strong {
+  color: var(--clay);
+  font-size: 1.45rem;
+  line-height: 1.1;
+}
+
+.footprint-stat-row span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.footprint-density {
+  display: grid;
+  gap: 6px;
+}
+
+.footprint-density .meta {
+  margin: 0;
+}
+
+.footprint-density-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  overflow: hidden;
+  height: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+}
+
+.footprint-density-bar span:nth-child(1) {
+  background: color-mix(in srgb, var(--clay), transparent 82%);
+}
+
+.footprint-density-bar span:nth-child(2) {
+  background: color-mix(in srgb, var(--clay), transparent 68%);
+}
+
+.footprint-density-bar span:nth-child(3) {
+  background: color-mix(in srgb, var(--clay), transparent 48%);
+}
+
+.footprint-density-bar span:nth-child(4) {
+  background: color-mix(in srgb, var(--clay), transparent 26%);
+}
+
+.footprint-density-labels {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.province-summary-list {
+  display: grid;
+  gap: 10px;
+}
+
+.province-summary {
+  display: grid;
+  gap: 5px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.province-summary:last-child {
+  border-bottom: 0;
+}
+
+.province-summary strong {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.province-summary i {
+  display: block;
+  width: 100%;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line), white 28%);
+}
+
+.province-summary i::before {
+  display: block;
+  width: var(--province-progress);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--clay);
+  content: "";
 }
 
 .footprint-city-grid {
@@ -598,6 +750,7 @@ h3 {
 
   .grid,
   .photo-strip,
+  .footprint-overview,
   .footprint-city-grid {
     grid-template-columns: 1fr;
   }
