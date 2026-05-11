@@ -83,6 +83,21 @@ export const prerender = false;
       return "这个邮箱可能已经注册，请直接登录或换一个邮箱。";
     }
 
+    if (
+      errorMessage.toLowerCase().includes("rate limit") ||
+      errorMessage.includes("429")
+    ) {
+      return "注册邮件发送太频繁，请稍后再试，或换一个邮箱。";
+    }
+
+    if (
+      errorMessage.toLowerCase().includes("invalid email") ||
+      errorMessage.toLowerCase().includes("email address") ||
+      errorMessage.toLowerCase().includes("invalid")
+    ) {
+      return "邮箱地址未通过 Supabase 校验，请换一个真实可收信邮箱。";
+    }
+
     return "注册失败，请检查邮箱、密码和邀请码后再试。";
   }
 
